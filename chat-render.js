@@ -88,7 +88,9 @@ export async function renderMessagesNow() {
   });
   if (stale.length) {
     touchRoomMsgs(roomId);
-    kvDelMany('messages', stale).catch(() => {});
+    kvDelMany('messages', stale)
+      .catch(() => {})
+      .then(() => touchRoomMsgs(roomId));
   }
   cur.lastItemHashes = items.map((x) => x.hash);
   renderPinBar(items);

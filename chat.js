@@ -270,17 +270,27 @@ export const loadRoom = (roomId) => kvGet('rooms', roomId);
 // записи в её ленту (раньше каждый рендер списка читал ВСЕ сообщения ВСЕХ
 // чатов — в старых больших чатах интерфейс заметно тормозил).
 export const roomSummaryCache = new Map(); // roomId -> {last, lastTs, others:number[]}
+// v44: поколение ленты комнаты. Сброс кэша только ДО записи оставлял гонку:
+// сводка, начатая между сбросом и концом записи, читала ленту без нового
+// сообщения и клала в кэш устаревшее превью (в списке чатов оставалось
+// предпоследнее сообщение, пока не придёт следующее). Теперь лента
+// «трогается» и после записи, а сводка кэшируется, только если за время
+// чтения поколение не сменилось.
+const roomSummaryGen = new Map();
 export function touchRoomMsgs(roomId) {
   roomSummaryCache.delete(roomId);
+  roomSummaryGen.set(roomId, (roomSummaryGen.get(roomId) || 0) + 1);
 }
 export async function putMsg(roomId, entry) {
   touchRoomMsgs(roomId);
   if (cur && cur.rec.roomId === roomId && cur.msgIds && entry?.msg?.id) cur.msgIds.add(entry.msg.id);
   await kvPut('messages', roomId + ':' + entry.hash, { roomId, ...entry });
+  touchRoomMsgs(roomId);
 }
 async function delMsg(roomId, hash) {
   touchRoomMsgs(roomId);
   await kvDel('messages', roomId + ':' + hash);
+  touchRoomMsgs(roomId);
 }
 export async function storeMessage(rec, entry) {
   await putMsg(rec.roomId, entry);
@@ -789,6 +799,7 @@ function applySidebarFilter() {
 async function roomSummary(roomId, rec = null) {
   const hit = roomSummaryCache.get(roomId);
   if (hit) return hit;
+  const gen = roomSummaryGen.get(roomId) || 0;
   const msgs = await roomMessages(roomId);
   // v27: превью — по последнему ВИДИМОМУ сообщению: управляющие типы
   // (реакции, правки, закрепы) и обмен ключами эпохи в превью не показываем.
@@ -796,7 +807,7 @@ async function roomSummary(roomId, rec = null) {
   const last = visible.length ? visible[visible.length - 1] : null;
   const others = visible.filter((it) => !isOwnEntry(it, rec) && !it.local).map((it) => it.seq || 0);
   const sm = { last, others };
-  roomSummaryCache.set(roomId, sm);
+  if ((roomSummaryGen.get(roomId) || 0) === gen) roomSummaryCache.set(roomId, sm);
   return sm;
 }
 
@@ -1950,6 +1961,7 @@ export async function wipeLocalRoom(roomId, { byCreator = false, silent = false 
   // v38: одной транзакцией по диапазону ключей комнаты.
   touchRoomMsgs(roomId);
   await kvDelPrefix('messages', roomId + ':').catch(() => {});
+  touchRoomMsgs(roomId);
   await kvDel('rooms', roomId).catch(() => {});
   sweepState.delete(roomId);
   addTombstone(roomId);
@@ -2324,6 +2336,7 @@ export async function applyControlMessage(msg, sigOk) {
       got.entry.reactions = applyReactionState(got.entry.reactions, msg.devPub, data.emoji, data.op);
       touchRoomMsgs(roomId);
       await kvPut('messages', roomId + ':' + got.target, got.entry);
+      touchRoomMsgs(roomId);
       renderMessages().catch(() => {});
       return;
     }
@@ -2340,6 +2353,7 @@ export async function applyControlMessage(msg, sigOk) {
       if (applyEditOrDelete(got.entry, msg, sigOk)) {
         touchRoomMsgs(roomId);
         await kvPut('messages', roomId + ':' + got.target, got.entry);
+        touchRoomMsgs(roomId);
         if (fileId) {
           // Удаление «для всех»: локально забываем скачанные чанки файла.
           const st = fileState.get(fileId);
