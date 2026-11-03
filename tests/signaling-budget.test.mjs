@@ -121,3 +121,72 @@ test('после close() сообщения не доставляются, в т
   await sig._recv(await msg('m3'), 'nostr');
   assert.deepEqual(got.map((m) => m.mid), ['m1']);
 });
+
+// v42: Nostr тоже ротирует сокет после 9 КБ, но неудачное обновление
+// (429 у nos.lol / nostr.mom) раньше повторялось на каждом следующем
+// сообщении старого сокета — эхо собственных публикаций давало попытку
+// каждые 3–6 с, и реле отвечали 429 всё чаще. Теперь пауза растёт, а
+// обновлённый сокет не просит у реле минуту истории.
+class FakeWS {
+  static made = [];
+  constructor(url) {
+    this.url = url;
+    this.readyState = 0;
+    this.sent = [];
+    FakeWS.made.push(this);
+  }
+  send(d) {
+    this.sent.push(d);
+  }
+  close() {
+    this.readyState = 3;
+    this.onclose?.();
+  }
+  up() {
+    this.readyState = 1;
+    this.onopen?.();
+  }
+  msg(n) {
+    this.onmessage?.({ data: JSON.stringify(['OK', 'x'.repeat(n)]) });
+  }
+}
+
+test('Nostr: неудачное обновление сокета не повторяется на каждом сообщении', (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 1_800_000_000_000 });
+  const prevWS = globalThis.WebSocket;
+  globalThis.WebSocket = FakeWS;
+  FakeWS.made = [];
+  try {
+    const sig = new Signaling({ topic: 't1', key: null, selfId: 'a', inst: 'i', brokers: [], relays: [] });
+    sig._recv = async () => {};
+    sig._nostr('wss://r1', 0);
+    const [w1] = FakeWS.made;
+    w1.up();
+    const since = (w) => JSON.parse(w.sent[0])[2].since;
+    assert.equal(since(w1), 1_800_000_000 - 60, 'первое подключение — с минутой истории');
+    w1.msg(5000);
+    assert.equal(FakeWS.made.length, 1, 'до бюджета обновления нет');
+    w1.msg(5000);
+    assert.equal(FakeWS.made.length, 2, 'бюджет превышен — новый сокет');
+    FakeWS.made[1].close(); // реле ответило 429
+    for (let i = 0; i < 5; i++) w1.msg(300); // эхо наших публикаций
+    assert.equal(FakeWS.made.length, 2, 'повтор не на каждом сообщении');
+    t.mock.timers.tick(3100);
+    w1.msg(300);
+    assert.equal(FakeWS.made.length, 3, 'после паузы — новая попытка');
+    FakeWS.made[2].close();
+    t.mock.timers.tick(3100);
+    w1.msg(300);
+    assert.equal(FakeWS.made.length, 3, 'вторая пауза длиннее первой');
+    t.mock.timers.tick(3000);
+    w1.msg(300);
+    assert.equal(FakeWS.made.length, 4);
+    const w4 = FakeWS.made[3];
+    w4.up();
+    assert.ok(since(w4) >= Math.floor(Date.now() / 1000) - 5, 'обновлённый сокет — без минуты истории');
+    assert.equal(sig.nostr.get('wss://r1'), w4, 'новый сокет занял место старого');
+    sig.close();
+  } finally {
+    globalThis.WebSocket = prevWS;
+  }
+});

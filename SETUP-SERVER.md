@@ -12,7 +12,7 @@ ZVONochek состоит из двух частей:
 
 **Кнопкой:**
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/qwkejkqwje1/zvonochek)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ZVONochek/zvonochek.github.io)
 
 Войдите в Cloudflare → **Deploy**. Конфиг берётся из корневого
 `wrangler.toml`: все Durable Objects (Room, Inbox, ChatRoom, Pairing) и

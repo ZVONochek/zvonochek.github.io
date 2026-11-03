@@ -5,9 +5,9 @@
 //   4) Публичные Nostr-реле поверх WSS (порт 443, подписанные эфемерные события)
 //   5) Публичный ntfy.sh (POST + WebSocket; «слепой» pub/sub без регистрации)
 // Каждое сообщение сжимается и шифруется AES-256-GCM; дубли отсекаются по mid.
-import { seal, open } from './crypto.js?v=41';
-import { ntfyTopic, ntfySubscribeUrl, parseNtfyFrame, fitsNtfy } from './ntfy.js?v=41';
-import { schnorr, utils } from './vendor/secp256k1.js?v=41';
+import { seal, open } from './crypto.js?v=42';
+import { ntfyTopic, ntfySubscribeUrl, parseNtfyFrame, fitsNtfy } from './ntfy.js?v=42';
+import { schnorr, utils } from './vendor/secp256k1.js?v=42';
 
 const hexs = (b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
 const NOSTR_KIND = 29333; // эфемерные события: реле их не хранят, только пересылают
@@ -333,7 +333,7 @@ export class Signaling {
   }
 
   // 4) Публичные Nostr-реле (WSS на порту 443)
-  _nostr(url, attempt) {
+  _nostr(url, attempt, renew = false) {
     if (this.closed) return;
     let ws;
     try {
@@ -354,7 +354,10 @@ export class Signaling {
         JSON.stringify([
           'REQ',
           'zv',
-          { kinds: [NOSTR_KIND], '#t': [this.ntag], since: Math.floor(Date.now() / 1000) - 60 },
+          // v42: обновлённому сокету история за минуту не нужна — старый
+          // ещё 2 с принимает параллельно; иначе повтор 60 с трафика звонка
+          // сразу снова превышал бюджет и запускал следующее обновление.
+          { kinds: [NOSTR_KIND], '#t': [this.ntag], since: Math.floor(Date.now() / 1000) - (renew ? 5 : 60) },
         ])
       );
       if (old && old !== ws) {
@@ -393,11 +396,18 @@ export class Signaling {
     ws.onerror = () => {};
   }
 
+  // v42: обновление сокета — с растущей паузой. Раньше неудачное обновление
+  // (429 у nos.lol / nostr.mom) повторялось на каждом следующем сообщении
+  // старого сокета: _bytes уже за порогом, — и реле отвечали 429 всё чаще
+  // (живой звонок v41: попытки каждые 3–6 с и после конца звонка).
   _nbudget(url, ws) {
-    if (this.nostr.get(url) === ws && ws._bytes > 9000 && !ws._renewing) {
-      ws._renewing = true;
-      this._nostr(url, 0);
-    }
+    if (this.nostr.get(url) !== ws || ws._bytes <= 9000 || ws._renewing) return;
+    const now = Date.now();
+    if (now < (ws._renewAt || 0)) return;
+    ws._renewTry = (ws._renewTry || 0) + 1;
+    ws._renewAt = now + Math.min(120000, 1500 * 2 ** Math.min(ws._renewTry, 6)); // 3, 6, 12 … 96 с
+    ws._renewing = true;
+    this._nostr(url, 0, true);
   }
 
   // 5) ntfy.sh — резервный «слепой» pub/sub: подписка по WebSocket,

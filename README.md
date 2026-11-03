@@ -5,8 +5,10 @@
 открыли ссылку — и вы на связи. Всё содержимое шифруется на устройствах;
 серверы и ретрансляторы видят только шифротекст.
 
-**Сайт:** https://qwkejkqwje1.github.io/zvonochek/ · версия **v41** ·
-[что нового](CHANGELOG.md) · [выпуск и деплой](RELEASE.md) · [аудит v41](AUDIT-v41.md)
+**Сайт:** https://zvonochek.github.io/ · версия **v42** · репозиторий
+[ZVONochek/zvonochek.github.io](https://github.com/ZVONochek/zvonochek.github.io) · прежний адрес
+https://qwkejkqwje1.github.io/zvonochek/ — архив v41, не обновляется ·
+[что нового](CHANGELOG.md) · [выпуск и деплой](RELEASE.md) · [аудит v42](AUDIT-v42.md)
 
 ## Возможности
 
@@ -173,7 +175,7 @@ iPhone с приложением на главном экране). Пропущ
 Рекомендуется для своего круга: данные будут только на вашем аккаунте
 Cloudflare (бесплатного тарифа хватает).
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/qwkejkqwje1/zvonochek)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ZVONochek/zvonochek.github.io)
 
 Или из корня репозитория: `npx wrangler deploy`. Затем в приложении:
 **Настройки → «Свой сервер»**. Пошагово — [SETUP-SERVER.md](SETUP-SERVER.md),

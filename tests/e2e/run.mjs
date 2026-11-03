@@ -16,7 +16,7 @@
 // Переменные: WORKER_URL (по умолчанию http://127.0.0.1:8787), PORT сайта
 // (8765 — этот Origin разрешён воркеру в «npm run worker:dev»),
 // VIEWPORTS (390x844,1440x900), CHROMIUM_PATH, SHOTS=1, ONLY=<сценарий>
-// (чат | звонок | номер | профиль | перезвон), DEBUG=1 — консоль страниц в вывод.
+// (чат | звонок | номер | профиль | перезвон | асимметрия | мост), DEBUG=1 — консоль страниц в вывод.
 import http from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -286,6 +286,116 @@ async function recallScenario(browser, base, vp, errors) {
   await A.waitForTimeout(1000);
   const rx2 = await audioInDelta(B);
   assert.ok(rx2 > 1000, `звонок №2: голос Анны не доходит до Бориса (${rx2} байт за 3 с)`);
+  await A.context().close();
+  await B.context().close();
+}
+
+// v42: камера только у одной стороны. До v42 «вежливая» сторона с камерой,
+// приняв offer без видео, сразу начинала пересогласование ради своей камеры:
+// sendDesc ждал сбор кандидатов и отправлял вместо answer этот новый offer,
+// невежливая сторона отбрасывала его как встречный — P2P не вставал никогда
+// (живой звонок v41: 7 попыток, 0 RTP, весь звонок через мост).
+const noCamHook = () => {
+  const md = navigator.mediaDevices;
+  const gum = md.getUserMedia.bind(md);
+  const en = md.enumerateDevices.bind(md);
+  md.getUserMedia = (c = {}) =>
+    c.video && !c.audio ? Promise.reject(new DOMException('Requested device not found', 'NotFoundError')) : gum({ ...c, video: false });
+  md.enumerateDevices = async () => (await en()).filter((d) => d.kind !== 'videoinput');
+};
+const idHook = (id) => `try { sessionStorage.zvId = ${JSON.stringify(id)}; } catch {}`;
+const videoInFrames = (page) =>
+  page.evaluate(async () => {
+    let n = 0;
+    for (const pc of window.__pcs || []) {
+      if (pc.connectionState !== 'connected') continue;
+      (await pc.getStats()).forEach((r) => {
+        if (r.type === 'inbound-rtp' && r.kind === 'video') n += r.framesDecoded || 0;
+      });
+    }
+    return n;
+  });
+// Собеседник «как v41»: его offer без recvonly-видео — вежливой стороне с
+// камерой всё-таки нужно пересогласование, и answer не должен потеряться.
+const oldOffererHook = () => {
+  RTCPeerConnection.prototype.addTransceiver = function () {
+    throw new Error('v41: без recvonly');
+  };
+};
+async function asymScenario(browser, base, vp, errors) {
+  for (const [camPolite, oldOfferer] of [[true, false], [false, false], [true, true]]) {
+    const tag = (camPolite ? 'камера у вежливой стороны' : 'камера у невежливой стороны') + (oldOfferer ? ', offer как в v41' : '');
+    // selfId меньше — сторона вежливая (S.polite = selfId < m.from)
+    const idA = camPolite ? '0000000000000001' : 'fffffffffffffffe';
+    const idB = camPolite ? 'fffffffffffffffe' : '0000000000000001';
+    const A = await profile(browser, base, vp, 'A', errors, `(${pcHook})();${idHook(idA)}`);
+    await A.click('[data-home-tab="calls"]');
+    await A.click('#btnCreate');
+    await A.waitForSelector('#prejoin:not(.hidden)');
+    await A.fill('#name', 'Анна');
+    await A.click('#btnJoin');
+    await A.waitForSelector('#call:not(.hidden)');
+    const link = A.url();
+    const B = await profile(browser, base, vp, 'B', errors, `(${pcHook})();(${noCamHook})();${oldOfferer ? `(${oldOffererHook})();` : ''}${idHook(idB)}`);
+    await B.goto(link);
+    await B.waitForSelector('#prejoin:not(.hidden)');
+    await B.fill('#name', 'Борис');
+    await B.click('#btnJoin');
+    const both = async () => (await isShown(A, '#quality')) && (await isShown(B, '#quality'));
+    assert.ok(await until(both, 25000), `${tag}: P2P не соединился за 25 с`);
+    await A.waitForTimeout(1000);
+    assert.ok((await audioInDelta(B)) > 1000, `${tag}: голос Анны не доходит до Бориса`);
+    assert.ok((await audioInDelta(A)) > 1000, `${tag}: голос Бориса не доходит до Анны`);
+    assert.ok(await until(async () => (await videoInFrames(B)) > 10, 15000), `${tag}: видео Анны не дошло до Бориса`);
+    await A.context().close();
+    await B.context().close();
+  }
+}
+
+// v42: мост 2.0 (WebCodecs Opus, кадры 20 мс). До v42 кодер был настроен
+// «моно», а MediaStreamDestination отдаёт стерео: первый же encode падал,
+// и мост всегда тихо откатывался на 1.0 (MediaRecorder, куски по 0,4 с).
+const codecHook = () => {
+  const z = (window.__codec = { enc: 0, encErr: 0, dec: 0, decErr: 0 });
+  const E = window.AudioEncoder;
+  const D = window.AudioDecoder;
+  if (E) window.AudioEncoder = class extends E {
+    constructor(i) {
+      super({ output: (c, m) => { z.enc++; i.output(c, m); }, error: (e) => { z.encErr++; i.error(e); } });
+    }
+  };
+  if (D) window.AudioDecoder = class extends D {
+    constructor(i) {
+      super({ output: (d) => { z.dec++; i.output(d); }, error: (e) => { z.decErr++; i.error(e); } });
+    }
+  };
+  try { localStorage.zvNetMode = 'bridge'; } catch {}
+};
+async function bridgeScenario(browser, base, vp, errors) {
+  const A = await profile(browser, base, vp, 'A', errors, codecHook);
+  await A.click('[data-home-tab="calls"]');
+  await A.click('#btnCreate');
+  await A.waitForSelector('#prejoin:not(.hidden)');
+  await A.fill('#name', 'Анна');
+  await A.click('#btnJoin');
+  await A.waitForSelector('#call:not(.hidden)');
+  const link = A.url();
+  const B = await profile(browser, base, vp, 'B', errors, codecHook);
+  await B.goto(link);
+  await B.waitForSelector('#prejoin:not(.hidden)');
+  await B.fill('#name', 'Борис');
+  await B.click('#btnJoin');
+  const badges = async () => (await isShown(A, '#bridgeBadge')) && (await isShown(B, '#bridgeBadge'));
+  assert.ok(await until(badges, 25000), 'мост «только мост» не включился');
+  const z = async () => [await A.evaluate(() => window.__codec), await B.evaluate(() => window.__codec)];
+  const ok = await until(async () => (await z()).every((c) => c.enc > 25 && c.dec > 25), 15000);
+  const diagTail = async (P) => {
+    return (await P.evaluate(() => document.querySelector('#diagLog')?.textContent || '')).split('\n').slice(-14).join('\n');
+  };
+  if (!ok) {
+    assert.fail('мост 2.0: кадры не кодируются/не декодируются: ' + JSON.stringify(await z()) + '\nA:\n' + (await diagTail(A)) + '\nB:\n' + (await diagTail(B)));
+  }
+  assert.ok((await z()).every((c) => !c.encErr && !c.decErr), 'мост 2.0: ошибки кодека: ' + JSON.stringify(await z()));
   await A.context().close();
   await B.context().close();
 }
@@ -580,7 +690,7 @@ const browser = await chromium.launch({
 let failed = 0;
 for (const vp of VIEWPORTS) {
   let list = [['чат', chatScenario], ['звонок', callScenario]];
-  if (vp === VIEWPORTS[0]) list.push(['номер', numberScenario], ['профиль', linkScenario], ['перезвон', recallScenario]);
+  if (vp === VIEWPORTS[0]) list.push(['номер', numberScenario], ['профиль', linkScenario], ['перезвон', recallScenario], ['асимметрия', asymScenario], ['мост', bridgeScenario]);
   if (process.env.ONLY) list = list.filter(([n]) => n === process.env.ONLY);
   for (const [name, fn] of list) {
     const errors = [];

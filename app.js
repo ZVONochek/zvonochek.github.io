@@ -1,12 +1,12 @@
-import { CONFIG, getWorkerBase, setWorkerBase, normalizeWorkerUrl, DEFAULT_WORKER_URL } from './config.js?v=41';
-import { newSecret, deriveRoom, safetyCode, safetyCodeBridge, b64u, seal, open as openSealed, genP256KeyPair, sha256hex } from './crypto.js?v=41';
-import { hasPersonal, getPersonal, ensurePersonal, signWithDevice, signWithKey, personalLinkOf, fpOfPubRaw, getChatDeviceEcdh, rotatePersonal, encryptWithVault, decryptWithVault, adminSigner, resetIdentityCache } from './identity.js?v=41';
-import { inboxRegister, inboxRing, inboxRingState, inboxAck, inboxAnswer, inboxCancel, inboxMissed, inboxMissedAck, inboxRetire, InboxListener } from './inbox.js?v=41';
-import { kvGet, kvPut, kvAll, kvDel, wipeDatabase } from './store.js?v=41';
-import { Signaling } from './signaling.js?v=41';
-import { ROUTE_SHORT, readCounters, deriveSample, bridgeSample, CallRecorder, journalDigest, plural } from './callstats.js?v=41';
-import { renderLiveStats, renderCallsDashboard, renderCallsList, renderContactsList } from './stats-ui.js?v=41';
-import { anonName, randomAnonName } from './anon-names.js?v=41';
+import { CONFIG, getWorkerBase, setWorkerBase, normalizeWorkerUrl, DEFAULT_WORKER_URL } from './config.js?v=42';
+import { newSecret, deriveRoom, safetyCode, safetyCodeBridge, b64u, seal, open as openSealed, genP256KeyPair, sha256hex } from './crypto.js?v=42';
+import { hasPersonal, getPersonal, ensurePersonal, signWithDevice, signWithKey, personalLinkOf, fpOfPubRaw, getChatDeviceEcdh, rotatePersonal, encryptWithVault, decryptWithVault, adminSigner, resetIdentityCache } from './identity.js?v=42';
+import { inboxRegister, inboxRing, inboxRingState, inboxAck, inboxAnswer, inboxCancel, inboxMissed, inboxMissedAck, inboxRetire, InboxListener } from './inbox.js?v=42';
+import { kvGet, kvPut, kvAll, kvDel, wipeDatabase } from './store.js?v=42';
+import { Signaling } from './signaling.js?v=42';
+import { ROUTE_SHORT, readCounters, deriveSample, bridgeSample, CallRecorder, journalDigest, plural } from './callstats.js?v=42';
+import { renderLiveStats, renderCallsDashboard, renderCallsList, renderContactsList } from './stats-ui.js?v=42';
+import { anonName, randomAnonName } from './anon-names.js?v=42';
 import {
   startDevices,
   hasOtherDevices,
@@ -16,10 +16,10 @@ import {
   rotateWithDevices,
   openAdminLink,
   SYNC_SETTINGS,
-} from './devices.js?v=41';
-import { VQ_CHOICES, deviceClass, captureTier, tierConstraints, rxCap, parseCap, videoEncoding, QLEVELS, audioCodecOrder, videoCodecOrder, CLASS_TEXT, sdpFirstCodec, audioRoute, echoWanted } from './media-policy.js?v=41';
+} from './devices.js?v=42';
+import { VQ_CHOICES, deviceClass, captureTier, tierConstraints, rxCap, parseCap, videoEncoding, QLEVELS, audioCodecOrder, videoCodecOrder, CLASS_TEXT, sdpFirstCodec, audioRoute, echoWanted } from './media-policy.js?v=42';
 
-export const APP_VERSION = 41;
+export const APP_VERSION = 42;
 export const APP_BUILD = '2026-11-01';
 // Версия разработки пишется из одного места: главная (бейдж и подпись),
 // экран подготовки, карточка подключения в начале звонка.
@@ -34,7 +34,7 @@ const setBtnIcon = (sel, name) => setUse((typeof sel === 'string' ? $(sel) : sel
 
 // Регистрация Service Worker для быстрого старта и работы PWA
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=41').catch(() => {});
+  navigator.serviceWorker.register('./sw.js?v=42').catch(() => {});
 }
 
 // Автообновление: если на сайте вышла новая версия, а браузер держит старую из кэша — перезагружаемся.
@@ -482,7 +482,7 @@ function ensureAudioEngine() {
     S.gateGainNode = ctx.createGain();
     S.gateGainNode.gain.value = 1;
 
-    S.procDest = ctx.createMediaStreamDestination();
+    S.procDest = monoDest(ctx);
 
     S.hpFilter.connect(S.micGainNode);
     S.micGainNode.connect(S.micAnalyser);
@@ -586,13 +586,24 @@ function recoverRemoteAudio(reason) {
 // перезагрузки или после смены микрофона собеседнику уходило 0 байт звука.
 // Теперь трек не останавливаем (микрофон освобождает stop() сырого трека),
 // а если он всё-таки умер — пересоздаём destination.
+// v42: обработанный микрофон — моно. MediaStreamDestination по умолчанию
+// стерео (channelCount 2): голосу это не нужно, а кодер моста 2.0 (моно)
+// падал на первом же кадре — мост 2.0 не работал ни разу.
+function monoDest(ctx) {
+  const d = ctx.createMediaStreamDestination();
+  try {
+    d.channelCount = 1;
+    d.channelCountMode = 'explicit';
+  } catch {}
+  return d;
+}
 const isProcTrack = (t) => !!t && !!S.procDest && S.procDest.stream.getAudioTracks().includes(t);
 function liveProcTrack() {
   if (!S.audioCtx || !S.gateGainNode || !S.procDest) return null;
   let t = S.procDest.stream.getAudioTracks()[0];
   if (!t || t.readyState === 'ended') {
     try { S.gateGainNode.disconnect(S.procDest); } catch {}
-    S.procDest = S.audioCtx.createMediaStreamDestination();
+    S.procDest = monoDest(S.audioCtx);
     S.gateGainNode.connect(S.procDest);
     t = S.procDest.stream.getAudioTracks()[0];
     log('Трек микрофона был остановлен — пересоздан');
@@ -1807,6 +1818,9 @@ function activateBridge(reason = 'Активирован аудио-мост ч�
   S.bridgeNextPlayTime = 0;
   clearTimeout(S.bridgeAutoTimer);
   log(reason);
+  // v42: progress() при активном мосте молчит — без этого под именем
+  // собеседника весь звонок висело «Обмен ключами шифрования…».
+  if ($('#connStep')) $('#connStep').textContent = 'Голос идёт через мост — прямой путь ищем в фоне';
   toast('Включён мост без TURN: голос идёт через зашифрованный сигнал', 5000);
   if (!S.bridgeCounted) {
     S.bridgeCounted = true;
@@ -1878,32 +1892,49 @@ function startBridgeRecorder() {
   startBridgeRecorderV1();
 }
 
+function upgradeBridge2() {
+  if (!webCodecsBridgeSupported()) return;
+  clearInterval(S.bridgeRecTimer);
+  S.bridgeRecTimer = null;
+  startBridgeRecorder();
+}
+
 function startBridge2() {
   stopBridge2();
   const track = liveProcTrack();
   if (!track) return false;
-  const sampleRate = track.getSettings?.().sampleRate || 48000;
-  const st = { running: true, sampleRate, frames: [], flushTimer: null, enc: null, reader: null };
+  // sampleRate/ch — формат входных кадров (настройка кодера), outRate/outCh —
+  // формат самого Opus-потока из decoderConfig: его и сообщаем собеседнику.
+  const st = { running: true, sampleRate: 0, ch: 0, outRate: 48000, outCh: 1, frames: [], flushTimer: null, enc: null, reader: null };
   S.bridge2 = st;
+  const fail = (e) => {
+    if (S.bridge2 !== st) return;
+    log(`Мост 2.0: ошибка кодировщика (${e?.name || 'Error'}: ${e?.message || e}) — переходим на мост 1.0`);
+    stopBridge2();
+    if (S.bridgeActive) {
+      S.bridgeMode = 'mediarecorder';
+      startBridgeRecorderV1();
+    }
+  };
   try {
     st.enc = new AudioEncoder({
-      output: (chunk) => {
+      output: (chunk, meta) => {
+        // v42: у AudioContext на 44,1 кГц (частые Windows/Android) раньше
+        // уходило sr: 44100 — Opus так не декодируется, и у собеседника
+        // AudioDecoder падал на каждом пакете. Поток Opus всегда 48 кГц.
+        const dc = meta?.decoderConfig;
+        if (dc) {
+          st.outRate = dc.sampleRate || 48000;
+          st.outCh = dc.numberOfChannels || 1;
+        }
         try {
           const buf = new ArrayBuffer(chunk.byteLength);
           chunk.copyTo(buf);
           st.frames.push(new Uint8Array(buf));
         } catch {}
       },
-      error: (e) => {
-        console.warn('bridge2 enc', e);
-        if (S.bridgeActive) {
-          stopBridge2();
-          S.bridgeMode = 'mediarecorder';
-          startBridgeRecorderV1();
-        }
-      },
+      error: fail,
     });
-    st.enc.configure({ codec: 'opus', sampleRate, numberOfChannels: 1, bitrate: 24000 });
     const processor = new MediaStreamTrackProcessor({ track });
     st.reader = processor.readable.getReader();
     st.flushTimer = setInterval(flushBridge2Frames, 120);
@@ -1913,6 +1944,20 @@ function startBridge2() {
           const { value, done } = await st.reader.read();
           if (done) break;
           if (!value) continue;
+          // v42: кодер настраиваем по настоящему кадру (частота и число
+          // каналов), а не по getSettings(): несовпадение с конфигом — это
+          // EncodingError на первом encode и тихий откат на мост 1.0.
+          if (value.sampleRate !== st.sampleRate || value.numberOfChannels !== st.ch) {
+            try {
+              st.enc.configure({ codec: 'opus', sampleRate: value.sampleRate, numberOfChannels: value.numberOfChannels, bitrate: 24000 });
+              st.sampleRate = value.sampleRate;
+              st.ch = value.numberOfChannels;
+            } catch (e) {
+              value.close();
+              fail(e);
+              break;
+            }
+          }
           // Кодируем только реальную речь: тишина не жжёт трафик сигналинга.
           if (S.micOn && !S.deafened && S.isSpeaking && st.enc.state === 'configured') {
             try { st.enc.encode(value); } catch {}
@@ -1947,7 +1992,7 @@ function flushBridge2Frames() {
     o += f.length;
   }
   S.sig?.send(
-    { type: 'voice2', to: S.peer.id, toInst: S.peer.inst, sr: st.sampleRate, b64: b64u.enc(out), _noZip: true },
+    { type: 'voice2', to: S.peer.id, toInst: S.peer.inst, sr: st.outRate, ch: st.outCh > 1 ? st.outCh : undefined, b64: b64u.enc(out), _noZip: true },
     { voice: true }
   );
 }
@@ -1962,15 +2007,15 @@ function stopBridge2() {
   if (S.bridge2 === st) S.bridge2 = null;
 }
 
-function ensureBridgeDecoder(sr) {
+function ensureBridgeDecoder(sr, ch = 1) {
   const ctx = ensureAudioEngine();
   if (!ctx || typeof AudioDecoder === 'undefined') return null;
   let d = S.bridgeDec;
-  if (d && d.sampleRate === sr && d.dec.state !== 'closed') return d;
+  if (d && d.sampleRate === sr && d.ch === ch && d.dec.state !== 'closed') return d;
   if (d) {
     try { d.dec.close(); } catch {}
   }
-  d = S.bridgeDec = { sampleRate: sr, nextPlay: 0, ts: 0, dec: null };
+  d = S.bridgeDec = { sampleRate: sr, ch, nextPlay: 0, ts: 0, dec: null };
   d.dec = new AudioDecoder({
     output: (data) => {
       try { scheduleDecodedBridgeFrame(data); } catch {}
@@ -1978,7 +2023,7 @@ function ensureBridgeDecoder(sr) {
     },
     error: (e) => console.warn('bridge2 dec', e),
   });
-  d.dec.configure({ codec: 'opus', sampleRate: sr, numberOfChannels: 1 });
+  d.dec.configure({ codec: 'opus', sampleRate: sr, numberOfChannels: ch });
   return d;
 }
 
@@ -2013,7 +2058,9 @@ async function playBridgeVoice2(m) {
   }
   S.bridgeSpeakingUntil = Date.now() + 400;
   $('#peerAvatarRing')?.classList.add('speaking');
-  const d = ensureBridgeDecoder(m.sr || 48000);
+  // Opus декодируется только в 8/12/16/24/48 кГц; v41 мог прислать 44100.
+  const sr = [8000, 12000, 16000, 24000, 48000].includes(m.sr) ? m.sr : 48000;
+  const d = ensureBridgeDecoder(sr, m.ch === 2 ? 2 : 1);
   if (!d) return;
   const bytes = b64u.dec(m.b64);
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -2223,7 +2270,12 @@ async function onSignal(m) {
     case 'hello':
     case 'hi':
       if (!acceptPeer(m)) return;
-      if (S.peer && typeof m.bc === 'number') S.peer.bridgeCodecs = !!m.bc;
+      if (S.peer && typeof m.bc === 'number') {
+        const had = S.peer.bridgeCodecs;
+        S.peer.bridgeCodecs = !!m.bc;
+        // v42: мост уже идёт как 1.0, а собеседник умеет 2.0 — переключаемся.
+        if (!had && S.peer.bridgeCodecs && S.bridgeActive && S.bridgeMode === 'mediarecorder') upgradeBridge2();
+      }
       if (S.peer) S.peer.vc = m.vc === 'h264' ? 'h264' : '';
       if (m.type === 'hello') {
         S.sig?.send({ type: 'hi', to: m.from, toInst: m.inst, name: myName(), ver: APP_VERSION, bc: webCodecsBridgeSupported() ? 1 : 0, vc: S.hwPref || undefined, br: bridgeOnlyFlag() });
@@ -2325,7 +2377,10 @@ function acceptPeer(m) {
 }
 
 function setPeer(m) {
-  S.peer = { id: m.from, inst: m.inst, name: m.name || 'Собеседник', seen: Date.now(), vc: m.vc === 'h264' ? 'h264' : '' };
+  // v42: bc (умеет ли собеседник мост 2.0) берём сразу из того же hello/hi.
+  // В режиме «только мост» activateBridge() вызывается прямо отсюда — раньше,
+  // чем обработчик hello успевал записать bc, и мост всегда шёл как 1.0.
+  S.peer = { id: m.from, inst: m.inst, name: m.name || 'Собеседник', seen: Date.now(), vc: m.vc === 'h264' ? 'h264' : '', bridgeCodecs: m.bc === 1 };
   S.polite = selfId < m.from;
   S.peerBridgeOnly = m.br === 1;
   S.peerDialect = 'plain';
@@ -2432,6 +2487,7 @@ function createPC() {
   const pc = (S.pc = new RTCPeerConnection(mainPcConfig()));
   S.makingOffer = false;
   S.ignoreOffer = false;
+  S.renegPending = null;
   S.pendingCands = [];
   S.ackReceived = false;
   S.cands = { local: {}, remote: {} };
@@ -2470,6 +2526,19 @@ function createPC() {
 
   for (const t of S.local.getTracks()) pc.addTrack(t, S.local);
   if (S.screenTrack) pc.addTrack(S.screenTrack, S.local);
+  // v42: первый offer (его делает невежливая сторона) всегда несёт и аудио,
+  // и видео — без своего трека как recvonly. Камера собеседника встаёт в
+  // ответ сразу, без пересогласования посреди рукопожатия (это и ломало
+  // звонки с камерой только у одной стороны, в том числе со старыми v41).
+  // Вежливой стороне так делать нельзя: addTransceiver не сопоставляется
+  // с m-строками чужого offer и сам потребовал бы пересогласования.
+  if (!S.polite) {
+    for (const kind of ['audio', 'video']) {
+      if (!pc.getTransceivers().some((t) => t.receiver.track?.kind === kind)) {
+        try { pc.addTransceiver(kind, { direction: 'recvonly' }); } catch {}
+      }
+    }
+  }
 
   pc.ontrack = ({ track }) => {
     S.remote.addTrack(track);
@@ -2492,24 +2561,20 @@ function createPC() {
         if (e.name === 'NotAllowedError') $('#unmuteHint').classList.remove('hidden');
       });
   };
-  pc.onnegotiationneeded = async () => {
+  pc.onnegotiationneeded = () => {
     if (S.polite && !pc.currentRemoteDescription) {
       log('Ожидаем offer от собеседника');
       return;
     }
-    try {
-      S.makingOffer = true;
-      applyCodecPrefs(pc);
-      const offer = await pc.createOffer();
-      offer.sdp = tuneOpusSdp(offer.sdp);
-      await pc.setLocalDescription(offer);
-    } catch (e) {
-      log('Ошибка offer: ' + e.message);
+    // v42: вежливая сторона не начинает пересогласование, пока соединение не
+    // поднялось: её offer мог прийти раньше её же answer (каналы сигнала
+    // разные) и был бы отброшен как встречный. Догоняем по «connected».
+    if (S.polite && pc.connectionState !== 'connected') {
+      if (S.renegPending !== pc) log('Пересогласование (своя камера/экран) — после соединения');
+      S.renegPending = pc;
       return;
-    } finally {
-      S.makingOffer = false;
     }
-    sendDesc(pc);
+    makeOffer(pc);
   };
   pc.onicecandidate = ({ candidate }) => {
     if (pc !== S.pc) return;
@@ -2586,12 +2651,44 @@ function noteGDialect() {
 const descMsgType = () => (S.peerDialect === 'g' ? 'g_desc' : 'desc');
 const candMsgType = () => (S.peerDialect === 'g' ? 'g_cand' : 'cand');
 
+// v42: какое описание реально отправлять. Пока sendDesc ждёт сбор кандидатов,
+// может начаться пересогласование: новый offer затирает localDescription, но
+// answer всё равно обязан уйти — иначе собеседник навсегда застревает в
+// have-local-offer. Живой звонок v41: камера была только у «вежливой»
+// стороны, вместо answer дважды ушёл offer, 7 попыток, 0 RTP — только мост.
+function descToSend(pc, type) {
+  const ld = pc.localDescription;
+  if (ld && ld.type === type) return ld;
+  if (type === 'answer' && pc.currentLocalDescription?.type === 'answer') return pc.currentLocalDescription;
+  return null; // наш offer откатили (встречный offer) — он больше не нужен
+}
+
+async function makeOffer(pc) {
+  if (pc !== S.pc || pc.signalingState === 'closed') return;
+  try {
+    S.makingOffer = true;
+    applyCodecPrefs(pc);
+    const offer = await pc.createOffer();
+    offer.sdp = tuneOpusSdp(offer.sdp);
+    await pc.setLocalDescription(offer);
+  } catch (e) {
+    log('Ошибка offer: ' + e.message);
+    return;
+  } finally {
+    S.makingOffer = false;
+  }
+  sendDesc(pc);
+}
+
 async function sendDesc(pc) {
+  const type = pc.localDescription?.type;
+  if (!type) return;
   await waitGathering(pc, 450);
-  if (pc !== S.pc || !pc.localDescription) return;
+  const ld = pc === S.pc ? descToSend(pc, type) : null;
+  if (!ld) return;
   const desc = {
-    type: pc.localDescription.type,
-    sdp: tuneOpusSdp(pc.localDescription.sdp),
+    type: ld.type,
+    sdp: tuneOpusSdp(ld.sdp),
   };
   S.ackReceived = false;
   S.sig?.send({ type: descMsgType(), ...to(), desc });
@@ -2606,10 +2703,11 @@ async function sendDesc(pc) {
   // Если сбор кандидатов ещё продолжался — через 1.8 с досылаем консолидированный SDP со всеми STUN/TURN маршрутами
   if (pc.iceGatheringState !== 'complete') {
     await waitGathering(pc, 1800);
-    if (pc === S.pc && pc.localDescription && pc.connectionState !== 'connected') {
+    const full = pc === S.pc && pc.connectionState !== 'connected' ? descToSend(pc, type) : null;
+    if (full) {
       const fullDesc = {
-        type: pc.localDescription.type,
-        sdp: tuneOpusSdp(pc.localDescription.sdp),
+        type: full.type,
+        sdp: tuneOpusSdp(full.sdp),
       };
       if (sdpCands(fullDesc.sdp).length > sdpCands(desc.sdp).length) {
         S.sig?.send({ type: descMsgType(), ...to(), desc: fullDesc });
@@ -2624,9 +2722,8 @@ function scheduleResend(pc, desc, n) {
   S.resendTimer = setTimeout(() => {
     if (pc !== S.pc || pc.connectionState === 'connected' || S.ackReceived) return;
     if (desc.type === 'offer' && pc.signalingState !== 'have-local-offer') return;
-    const latestDesc = pc.localDescription
-      ? { type: pc.localDescription.type, sdp: tuneOpusSdp(pc.localDescription.sdp) }
-      : desc;
+    const ld = descToSend(pc, desc.type);
+    const latestDesc = ld ? { type: ld.type, sdp: tuneOpusSdp(ld.sdp) } : desc;
     log(`Повтор отправки ${latestDesc.type} (#${n})`);
     S.sig?.send({ type: descMsgType(), ...to(), desc: latestDesc });
     scheduleResend(pc, latestDesc, n + 1);
@@ -2752,6 +2849,13 @@ function onPcState(pc) {
     noteCodecs(pc);
     startStats(true);
     applyQuality();
+    if (S.renegPending === pc) {
+      S.renegPending = null;
+      if (pc.signalingState === 'stable') {
+        log('Соединение есть — досогласуем отложенное (камера/экран)');
+        makeOffer(pc);
+      }
+    }
   } else if (s === 'disconnected') {
     progress(80, 'Связь моргнула, восстанавливаем маршрут…');
     S.restartTimer = setTimeout(
