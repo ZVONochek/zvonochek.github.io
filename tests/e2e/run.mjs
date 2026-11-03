@@ -374,6 +374,46 @@ async function asymScenario(browser, base, vp, errors) {
   }
 }
 
+// v44: оба начинают без камер и включают их одновременно. Встречные offer'ы:
+// вежливая сторона откатывает свой (rollback), и Chromium оставляет входящую
+// видеодорожку muted, хотя кадры идут. До v44 приложение верило флагу muted —
+// у одного из двоих видео собеседника пряталось под заглушкой с аватаркой.
+async function videoBothScenario(browser, base, vp, errors) {
+  const remoteShown = (p) => p.evaluate(() => document.querySelector('#remote').videoWidth > 0 && document.querySelector('#remoteOff').classList.contains('hidden'));
+  for (const camPolite of [true, false]) {
+    const tag = camPolite ? 'Анна вежливая' : 'Анна невежливая';
+    const idA = camPolite ? '0000000000000001' : 'fffffffffffffffe';
+    const idB = camPolite ? 'fffffffffffffffe' : '0000000000000001';
+    const A = await profile(browser, base, vp, 'A', errors, `(${pcHook})();${idHook(idA)}`);
+    await A.click('[data-home-tab="calls"]');
+    await A.click('#btnCreate');
+    await A.waitForSelector('#prejoin:not(.hidden)');
+    await A.fill('#name', 'Анна');
+    await A.waitForTimeout(500);
+    await A.click('#pCam'); // без камеры
+    await A.click('#btnJoin');
+    await A.waitForSelector('#call:not(.hidden)');
+    const B = await profile(browser, base, vp, 'B', errors, `(${pcHook})();${idHook(idB)}`);
+    await B.goto(A.url());
+    await B.waitForSelector('#prejoin:not(.hidden)');
+    await B.fill('#name', 'Борис');
+    await B.waitForTimeout(500);
+    await B.click('#pCam');
+    await B.click('#btnJoin');
+    assert.ok(await until(async () => (await isShown(A, '#quality')) && (await isShown(B, '#quality')), 25000), `${tag}: звонок не соединился`);
+    await Promise.all([A.click('#cCam'), B.click('#cCam')]);
+    for (const [P, who] of [[A, 'Анна'], [B, 'Борис']]) {
+      assert.ok(await until(async () => (await videoInFrames(P)) > 30, 15000), `${tag}: ${who} не получает кадры`);
+      assert.ok(await until(() => remoteShown(P), 8000), `${tag}: у ${who === 'Анна' ? 'Анны' : 'Бориса'} видео собеседника закрыто заглушкой`);
+    }
+    // собеседник выключил камеру — заглушка возвращается
+    await Promise.all([A.click('#cCam'), B.click('#cCam')]);
+    for (const P of [A, B]) assert.ok(await until(async () => !(await remoteShown(P)), 6000), `${tag}: заглушка не вернулась после выключения камеры`);
+    await A.context().close();
+    await B.context().close();
+  }
+}
+
 // v42: мост 2.0 (WebCodecs Opus, кадры 20 мс). До v42 кодер был настроен
 // «моно», а MediaStreamDestination отдаёт стерео: первый же encode падал,
 // и мост всегда тихо откатывался на 1.0 (MediaRecorder, куски по 0,4 с).
@@ -717,7 +757,7 @@ const browser = await chromium.launch({
 let failed = 0;
 for (const vp of VIEWPORTS) {
   let list = [['чат', chatScenario], ['звонок', callScenario]];
-  if (vp === VIEWPORTS[0]) list.push(['номер', numberScenario], ['профиль', linkScenario], ['перезвон', recallScenario], ['асимметрия', asymScenario], ['мост', bridgeScenario]);
+  if (vp === VIEWPORTS[0]) list.push(['номер', numberScenario], ['профиль', linkScenario], ['перезвон', recallScenario], ['асимметрия', asymScenario], ['мост', bridgeScenario], ['видео', videoBothScenario]);
   if (process.env.ONLY) list = list.filter(([n]) => n === process.env.ONLY);
   for (const [name, fn] of list) {
     const errors = [];

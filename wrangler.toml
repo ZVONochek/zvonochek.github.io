@@ -37,3 +37,13 @@ class_name = "Pairing"
 [[migrations]]
 tag = "v4"
 new_sqlite_classes = ["Pairing"]
+
+# v44: устойчивые лимиты (worker/guard.js). Без этой привязки Worker работает
+# как раньше — лимиты только в памяти.
+[[durable_objects.bindings]]
+name = "GUARD"
+class_name = "Guard"
+
+[[migrations]]
+tag = "v5"
+new_sqlite_classes = ["Guard"]

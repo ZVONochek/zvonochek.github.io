@@ -8,7 +8,8 @@ import { Inbox } from './inbox.js';
 import { ChatRoom } from './chat-room.js';
 import { Pairing } from './pairing.js';
 import { getVapid, vapidAvailable } from './push.js';
-export { Inbox, ChatRoom, Pairing };
+import { Guard, guardAllows, guardRuleFor, bodyLimitFor } from './guard.js';
+export { Inbox, ChatRoom, Pairing, Guard };
 // Worker пересылает только зашифрованные сообщения (AES-256-GCM) и не знает ключей комнат.
 
 const JSON_HEADERS = {
@@ -97,11 +98,26 @@ export default {
         (env.METERED_DOMAIN && (env.METERED_API_KEY || env.METERED_API_TOKEN)) ||
         (env.TURN_URLS && env.TURN_USERNAME && env.TURN_CREDENTIAL)
       );
-      return json({ ok: true, app: 'ZVONochek', v: 41, turn: hasTurn, inbox: !!env.INBOX, chat: !!env.CHAT_ROOMS, pair: !!env.PAIRING, alias: !!env.PAIRING, backup: !!env.PAIRING, word: !!env.PAIRING, ratchet: !!env.CHAT_ROOMS, push: vapidAvailable(env), pushRepeat: true, retention: 'v38', devices: true, revoke: !!env.INBOX, linkNx: !!env.PAIRING, owner: !!env.INBOX, pushCrypto: 'v41', ts: Date.now() }, 200, cors);
+      return json({ ok: true, app: 'ZVONochek', v: 44, guard: !!env.GUARD, turn: hasTurn, inbox: !!env.INBOX, chat: !!env.CHAT_ROOMS, pair: !!env.PAIRING, alias: !!env.PAIRING, backup: !!env.PAIRING, word: !!env.PAIRING, ratchet: !!env.CHAT_ROOMS, push: vapidAvailable(env), pushRepeat: true, retention: 'v38', devices: true, revoke: !!env.INBOX, linkNx: !!env.PAIRING, owner: !!env.INBOX, pushCrypto: 'v41', ts: Date.now() }, 200, cors);
     }
 
     if (!originOk) {
       return json({ error: 'origin not allowed' }, 403, cors);
+    }
+
+    // v44: размер тела проверяем по Content-Length до чтения — раньше
+    // огромное тело сначала читалось целиком и только потом отбрасывалось.
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const len = Number(req.headers.get('content-length') || 0);
+      if (len > bodyLimitFor(url.pathname)) return json({ error: 'payload too large' }, 413, cors);
+    }
+    // v44: устойчивые лимиты на создание комнат, кодов, номеров, бэкапов и
+    // загрузку файлов (worker/guard.js) — счётчики в Durable Object, а не в
+    // памяти изолята, поэтому не обнуляются при перезапуске.
+    const guardRule = guardRuleFor(req.method, url.pathname);
+    if (guardRule) {
+      const g = await guardAllows(env, 'ip:' + (req.headers.get('CF-Connecting-IP') || 'unknown'), [guardRule]);
+      if (!g.ok) return json({ error: 'rate limited', retryAfter: g.retryAfter || 60 }, 429, cors);
     }
 
     // Поллинг и POST — самые дешёвые цели для флуда, ограничиваем их по IP.
@@ -225,6 +241,18 @@ export default {
       const clientIp = req.headers.get('CF-Connecting-IP') || 'unknown';
       if (!checkTurnRateLimit(clientIp)) {
         return json({ iceServers: FALLBACK_STUN, rateLimited: true }, 200, cors);
+      }
+      // v44: тот же лимит, но устойчивый, плюс общий дневной бюджет выдачи
+      // TURN-ключей (только если провайдеры TURN настроены).
+      const turnConfigured = !!(
+        (env.TURN_KEY_ID && env.TURN_KEY_API_TOKEN) ||
+        (env.METERED_DOMAIN && (env.METERED_API_KEY || env.METERED_API_TOKEN)) ||
+        (env.TURN_URLS && env.TURN_USERNAME && env.TURN_CREDENTIAL)
+      );
+      if (turnConfigured) {
+        const perIp = await guardAllows(env, 'ip:' + clientIp, ['turn']);
+        const daily = perIp.ok ? await guardAllows(env, 'global', ['turnDay']) : perIp;
+        if (!daily.ok) return json({ iceServers: FALLBACK_STUN, rateLimited: true }, 200, cors);
       }
 
       const tasks = [];
@@ -365,9 +393,30 @@ export class Room {
     }
   }
 
+  // v44: тот же лимит поллинга/POST, что в Worker, но внутри объекта
+  // комнаты: он один на весь мир, так что счёт не дробится по изолятам.
+  roomRateOk(req) {
+    if (req.headers.get('Upgrade') === 'websocket') return true;
+    const now = Date.now();
+    if (!this.httpRate || this.httpRate.size > 2000) this.httpRate = new Map();
+    const key = (req.headers.get('CF-Connecting-IP') || 'unknown') + '|' + req.method;
+    const limit = req.method === 'POST' ? 90 : 40;
+    const e = this.httpRate.get(key);
+    if (!e || now > e.resetAt) {
+      this.httpRate.set(key, { count: 1, resetAt: now + 10_000 });
+      return true;
+    }
+    if (e.count >= limit) return false;
+    e.count++;
+    return true;
+  }
+
   async fetch(req) {
     const url = new URL(req.url);
     const peerId = url.searchParams.get('peer') || '';
+    if (!this.roomRateOk(req)) {
+      return new Response(JSON.stringify({ error: 'rate limited' }), { status: 429, headers: JSON_HEADERS });
+    }
 
     // А) HTTP POST — отправка пакета (резервный канал при блокировке WS + sendBeacon при закрытии вкладки)
     if (req.method === 'POST') {

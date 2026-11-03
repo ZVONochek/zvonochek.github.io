@@ -1,4 +1,4 @@
-# Cloudflare Worker ZVONochek (v39)
+# Cloudflare Worker ZVONochek (v44)
 
 «Слепой» сервер: хранит и пересылает только шифротекст, ключей не знает.
 
@@ -9,6 +9,7 @@
 | `inbox.js` | дозвон на личную ссылку и из чата, пропущенные, push звонков (Inbox) |
 | `pairing.js` | коды, короткие ссылки, кодовые фразы, резервные копии, служебный ключ VAPID (Pairing) |
 | `push.js` | Web Push (RFC 8291/8292): шифрование payload и VAPID на чистом WebCrypto |
+| `guard.js` | v44: устойчивые лимиты по IP (Guard): создание чатов, кодов, ссылок, бэкапов, регистрация номера, файлы, TURN |
 
 ## Деплой
 
@@ -17,8 +18,9 @@
 есть `worker/wrangler.toml` — он совпадает с корневым, кроме пути `main`
 (это проверяет `npm test`). Локально: `npm run worker:dev`.
 
-Новых Durable Objects и миграций в v38–v39 нет: деплой поверх v32–v38
-безопасен, данные сохраняются.
+v44 добавляет Durable Object `Guard` (миграция `v5`, `new_sqlite_classes`).
+Деплой поверх v32–v41 безопасен, данные сохраняются. Без привязки `GUARD`
+Worker работает как раньше, только без устойчивых лимитов.
 
 ## Переменные и секреты
 
@@ -49,11 +51,13 @@ TURN: с v38 клиент держит статический TURN из `config.
 
 ## Эндпоинты
 
-- `GET /health` — `{"ok":true,"v":39,"turn":…,"push":…,"pushRepeat":true,"retention":"v38","devices":true,"revoke":true,"linkNx":true,…}`.
+- `GET /health` — `{"ok":true,"v":44,"guard":true,"turn":…,"push":…,"pushRepeat":true,"retention":"v38","devices":true,"revoke":true,"linkNx":true,…}`.
 - `GET /turn` — временные ICE-серверы:
   - провайдеры опрашиваются параллельно, таймаут 3,5 с;
   - порт 53 отбрасывается, `turns:`/443/TCP идут первыми;
-  - не больше 20 запросов в минуту с одного IP.
+  - не больше 20 запросов в минуту с одного IP в одном экземпляре Worker;
+    v44: плюс 60 в минуту с IP и 20 000 в сутки всего — в Guard (если TURN
+    настроен). Сверх лимита — только STUN и `rateLimited: true`.
 - `GET /push-key` — публичный ключ VAPID.
 - `/room/<id>` — сигнал звонка: WebSocket с кольцевым буфером и
   HTTP-поллинг `GET ?since=` / `POST`, если WebSocket режут.
@@ -88,6 +92,28 @@ TURN: с v38 клиент держит статический TURN из `config.
   привязки устройства не перехватить вторым ответом). `/pair/backup` — резервная копия:
   `PUT` — залить, `GET` — получить, `POST {del:true}` — удалить
   (v38; подпись над `zv-backup-delete-v1|idHash|ts`, ts ± 10 мин).
+
+## Лимиты (v44)
+
+Guard — один Durable Object на IP (`ip:<адрес>`) и общий `global`. Счётчики
+лежат в хранилище объекта и переживают перезапуски. Сверх лимита — 429
+`{"error":"rate limited","retryAfter":<с>}`.
+
+| Запрос | Лимит с одного IP |
+|---|---|
+| `POST /chat/<id>/init` | 120 в час |
+| `POST /chat/<id>/file` | 3000 в час |
+| `POST /inbox/<topic>/register` | 200 в час |
+| `POST /pair/create` | 200 в час |
+| `POST /pair/alias`, `POST /pair/word` | по 60 в час |
+| `PUT /pair/backup` | 60 в час |
+| `GET /turn` | 60 в минуту, всего 20 000 в сутки |
+
+Сообщения, звонки и поллинг через Guard не идут. Если Guard недоступен,
+запрос пропускается. Размер тела проверяется по `Content-Length` до
+чтения (413): файл чата — 768 КБ, прочие `/chat/` — 384 КБ, `/room/` —
+256 КБ, бэкап — 128 КБ, остальное — 64 КБ. Объект комнаты сигнала сам
+ограничивает HTTP: 40 GET и 90 POST за 10 с с одного IP.
 
 ## Push
 
