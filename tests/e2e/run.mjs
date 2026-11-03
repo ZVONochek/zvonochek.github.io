@@ -67,6 +67,13 @@ async function profile(browser, base, [w, h], label, errors, init = null) {
   await page.waitForFunction(() => window.__zvAppBooted && window.__zvChatBooted);
   return page;
 }
+// v43: QR — SVG без width/height; в контейнере fit-content он схлопывался
+// в 0×0 (белый кружок вместо кода). Проверяем настоящий размер на экране.
+const qrSize = (page, sel) =>
+  page.evaluate((s) => {
+    const r = document.querySelector(s + ' svg')?.getBoundingClientRect();
+    return r ? Math.min(r.width, r.height) : 0;
+  }, sel);
 const shot = async (page, name, [w]) => SHOTS && page.screenshot({ path: path.join(SHOTS, `${name}-${w}.png`) });
 const isShown = (page, sel) =>
   page.evaluate((s) => {
@@ -118,6 +125,19 @@ async function chatScenario(browser, base, vp, errors) {
   await send(B, 'Договорились!');
   assert.ok(await until(() => A.locator('.chat-quote').count().then((n) => n >= 1)), 'цитата не дошла');
   assert.ok(await until(() => A.locator('.chat-chip').count().then((n) => n >= 1)), 'реакция не дошла');
+  // v43: быстрая отправка подряд без пауз — до исправления поле ввода
+  // очищалось после await sendMsg и стирало уже набранное следующее сообщение.
+  const burst = ['Раз', 'Два', 'Три', 'Четыре'];
+  for (const t of burst) {
+    await B.fill('#chatInput', t);
+    await B.press('#chatInput', 'Enter');
+  }
+  const gotAll = async (p) => {
+    const txt = await p.locator('#chatMessages .chat-msg-text').allInnerTexts();
+    return burst.every((t) => txt.some((x) => x.trim() === t));
+  };
+  assert.ok(await until(() => gotAll(B), 10000), 'быстрая отправка: не все сообщения ушли у Бориса');
+  assert.ok(await until(() => gotAll(A), 15000), 'быстрая отправка: Анна получила не все сообщения');
   await shot(A, 'chat-A', vp);
   await shot(B, 'chat-B', vp);
 
@@ -126,7 +146,7 @@ async function chatScenario(browser, base, vp, errors) {
   assert.equal(await A.locator('#chatMessages.duo .chat-msg-row .chat-avatar').count(), 0);
   if (vp[0] < 920) await A.click('#chatBack');
   await A.waitForTimeout(500);
-  assert.match(await A.textContent('#chatRoomsList'), /Договорились!/);
+  assert.match(await A.textContent('#chatRoomsList'), /Четыре/);
   await shot(A, 'chat-list', vp);
   await A.context().close();
   await B.context().close();
@@ -138,6 +158,8 @@ async function callScenario(browser, base, vp, errors) {
   await A.click('#btnCreate');
   await A.waitForSelector('#prejoin:not(.hidden)');
   await A.fill('#name', 'Анна');
+  await A.click('#btnQr');
+  assert.ok((await qrSize(A, '#qr')) >= 150, 'QR приглашения не виден (нулевой размер)');
   await shot(A, 'prejoin', vp);
   await A.click('#btnJoin');
   await A.waitForSelector('#call:not(.hidden)');
@@ -396,6 +418,9 @@ async function bridgeScenario(browser, base, vp, errors) {
     assert.fail('мост 2.0: кадры не кодируются/не декодируются: ' + JSON.stringify(await z()) + '\nA:\n' + (await diagTail(A)) + '\nB:\n' + (await diagTail(B)));
   }
   assert.ok((await z()).every((c) => !c.encErr && !c.decErr), 'мост 2.0: ошибки кодека: ' + JSON.stringify(await z()));
+  // v43: в мосте под именем собеседника — подсказка, что видео появится позже
+  assert.match(await A.textContent('#waitText'), /Видео появится, когда соединение станет прямым/);
+  assert.ok(await isShown(A, '#waitText'), 'подсказка о видео в мосте не видна');
   await A.context().close();
   await B.context().close();
 }
@@ -412,6 +437,8 @@ async function numberScenario(browser, base, vp, errors) {
   };
   const A = await profile(browser, base, vp, 'A', errors);
   const linkA1 = await mkPersonal(A);
+  await A.click('#btnQrPersonal');
+  assert.ok((await qrSize(A, '#personalQr')) >= 150, 'QR личной ссылки не виден');
   const B = await profile(browser, base, vp, 'B', errors);
   await mkPersonal(B);
   const ring = async (link) => {

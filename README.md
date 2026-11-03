@@ -5,7 +5,7 @@
 открыли ссылку — и вы на связи. Всё содержимое шифруется на устройствах;
 серверы и ретрансляторы видят только шифротекст.
 
-**Сайт:** https://zvonochek.github.io/ · версия **v42** · репозиторий
+**Сайт:** https://zvonochek.github.io/ · версия **v43** · репозиторий
 [ZVONochek/zvonochek.github.io](https://github.com/ZVONochek/zvonochek.github.io) · прежний адрес
 https://qwkejkqwje1.github.io/zvonochek/ — архив v41, не обновляется ·
 [что нового](CHANGELOG.md) · [выпуск и деплой](RELEASE.md) · [аудит v42](AUDIT-v42.md)

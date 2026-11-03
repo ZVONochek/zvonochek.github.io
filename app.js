@@ -1,12 +1,12 @@
-import { CONFIG, getWorkerBase, setWorkerBase, normalizeWorkerUrl, DEFAULT_WORKER_URL } from './config.js?v=42';
-import { newSecret, deriveRoom, safetyCode, safetyCodeBridge, b64u, seal, open as openSealed, genP256KeyPair, sha256hex } from './crypto.js?v=42';
-import { hasPersonal, getPersonal, ensurePersonal, signWithDevice, signWithKey, personalLinkOf, fpOfPubRaw, getChatDeviceEcdh, rotatePersonal, encryptWithVault, decryptWithVault, adminSigner, resetIdentityCache } from './identity.js?v=42';
-import { inboxRegister, inboxRing, inboxRingState, inboxAck, inboxAnswer, inboxCancel, inboxMissed, inboxMissedAck, inboxRetire, InboxListener } from './inbox.js?v=42';
-import { kvGet, kvPut, kvAll, kvDel, wipeDatabase } from './store.js?v=42';
-import { Signaling } from './signaling.js?v=42';
-import { ROUTE_SHORT, readCounters, deriveSample, bridgeSample, CallRecorder, journalDigest, plural } from './callstats.js?v=42';
-import { renderLiveStats, renderCallsDashboard, renderCallsList, renderContactsList } from './stats-ui.js?v=42';
-import { anonName, randomAnonName } from './anon-names.js?v=42';
+import { CONFIG, getWorkerBase, setWorkerBase, normalizeWorkerUrl, DEFAULT_WORKER_URL } from './config.js?v=43';
+import { newSecret, deriveRoom, safetyCode, safetyCodeBridge, b64u, seal, open as openSealed, genP256KeyPair, sha256hex } from './crypto.js?v=43';
+import { hasPersonal, getPersonal, ensurePersonal, signWithDevice, signWithKey, personalLinkOf, fpOfPubRaw, getChatDeviceEcdh, rotatePersonal, encryptWithVault, decryptWithVault, adminSigner, resetIdentityCache } from './identity.js?v=43';
+import { inboxRegister, inboxRing, inboxRingState, inboxAck, inboxAnswer, inboxCancel, inboxMissed, inboxMissedAck, inboxRetire, InboxListener } from './inbox.js?v=43';
+import { kvGet, kvPut, kvAll, kvDel, wipeDatabase } from './store.js?v=43';
+import { Signaling } from './signaling.js?v=43';
+import { ROUTE_SHORT, readCounters, deriveSample, bridgeSample, CallRecorder, journalDigest, plural } from './callstats.js?v=43';
+import { renderLiveStats, renderCallsDashboard, renderCallsList, renderContactsList } from './stats-ui.js?v=43';
+import { anonName, randomAnonName } from './anon-names.js?v=43';
 import {
   startDevices,
   hasOtherDevices,
@@ -16,10 +16,10 @@ import {
   rotateWithDevices,
   openAdminLink,
   SYNC_SETTINGS,
-} from './devices.js?v=42';
-import { VQ_CHOICES, deviceClass, captureTier, tierConstraints, rxCap, parseCap, videoEncoding, QLEVELS, audioCodecOrder, videoCodecOrder, CLASS_TEXT, sdpFirstCodec, audioRoute, echoWanted } from './media-policy.js?v=42';
+} from './devices.js?v=43';
+import { VQ_CHOICES, deviceClass, captureTier, tierConstraints, rxCap, parseCap, videoEncoding, QLEVELS, audioCodecOrder, videoCodecOrder, CLASS_TEXT, sdpFirstCodec, audioRoute, echoWanted } from './media-policy.js?v=43';
 
-export const APP_VERSION = 42;
+export const APP_VERSION = 43;
 export const APP_BUILD = '2026-11-01';
 // Версия разработки пишется из одного места: главная (бейдж и подпись),
 // экран подготовки, карточка подключения в начале звонка.
@@ -34,7 +34,7 @@ const setBtnIcon = (sel, name) => setUse((typeof sel === 'string' ? $(sel) : sel
 
 // Регистрация Service Worker для быстрого старта и работы PWA
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=42').catch(() => {});
+  navigator.serviceWorker.register('./sw.js?v=43').catch(() => {});
 }
 
 // Автообновление: если на сайте вышла новая версия, а браузер держит старую из кэша — перезагружаемся.
@@ -1221,6 +1221,15 @@ async function toggleCam() {
   refreshLocalView();
   syncButtons();
   sendCtrl({ t: 'state', mic: S.micOn, cam: S.camOn || !!S.screenTrack });
+  if (S.camOn) bridgeVideoHint('Камера включена');
+}
+
+// v43: мост передаёт только голос. Видео (камера, экран) уже подключено к
+// WebRTC и само появится у собеседника, когда прямой путь или TURN встанет, —
+// говорим об этом, чтобы включённую камеру не принимали за поломку.
+function bridgeVideoHint(what) {
+  if (!S.bridgeActive || S.pc?.connectionState === 'connected') return;
+  toast(`${what}. Через мост идёт только голос — собеседник увидит видео, когда соединение станет прямым`, 6000);
 }
 
 async function toggleScreen() {
@@ -1243,6 +1252,7 @@ async function toggleScreen() {
     $('#local').classList.add('screen');
     syncButtons();
     sendCtrl({ t: 'state', mic: S.micOn, cam: true });
+    bridgeVideoHint('Показ экрана включён');
   } catch (e) {
     console.warn(e);
   }
@@ -1821,7 +1831,7 @@ function activateBridge(reason = 'Активирован аудио-мост ч�
   // v42: progress() при активном мосте молчит — без этого под именем
   // собеседника весь звонок висело «Обмен ключами шифрования…».
   if ($('#connStep')) $('#connStep').textContent = 'Голос идёт через мост — прямой путь ищем в фоне';
-  toast('Включён мост без TURN: голос идёт через зашифрованный сигнал', 5000);
+  toast('Включён мост без TURN: голос идёт через зашифрованный сигнал. Видео появится, когда соединение станет прямым', 6000);
   if (!S.bridgeCounted) {
     S.bridgeCounted = true;
     countRoute('bridge');
@@ -2491,6 +2501,7 @@ function createPC() {
   S.pendingCands = [];
   S.ackReceived = false;
   S.cands = { local: {}, remote: {} };
+  S.remoteCandSeen = new Set();
   S.route = '';
   S.method = '';
   S.pcRouteCounted = false;
@@ -2777,10 +2788,7 @@ async function onDesc(desc, via) {
   }
   try {
     await pc.setRemoteDescription(desc);
-    for (const line of sdpCands(desc.sdp || '')) {
-      const t = / typ (\w+)/.exec(line)?.[1];
-      if (t) S.cands.remote[t] = (S.cands.remote[t] || 0) + 1;
-    }
+    for (const line of sdpCands(desc.sdp || '')) countRemoteCand(line);
     log(`Получен ${desc.type === 'offer' ? 'запрос (offer)' : 'ответ (answer)'} через ${viaName(via)}`);
     for (const c of S.pendingCands.splice(0)) await pc.addIceCandidate(c).catch(() => {});
     if (desc.type === 'offer') {
@@ -2801,10 +2809,23 @@ async function onDesc(desc, via) {
   }
 }
 
+// v43: один и тот же маршрут собеседника приходит и отдельным сообщением
+// (trickle), и внутри SDP, и в каждой повторной отправке — раньше каждый раз
+// считался заново («локальных 30» при ~16 настоящих). Считаем по адресу.
+function countRemoteCand(line) {
+  const p = String(line || '').replace(/^a=/, '').split(/\s+/);
+  const t = / typ (\w+)/.exec(line || '')?.[1];
+  if (!t || p.length < 6) return;
+  const key = `${p[2]}|${p[4]}|${p[5]}|${t}`.toLowerCase(); // протокол|адрес|порт|тип
+  if (!S.remoteCandSeen) S.remoteCandSeen = new Set();
+  if (S.remoteCandSeen.has(key)) return;
+  S.remoteCandSeen.add(key);
+  S.cands.remote[t] = (S.cands.remote[t] || 0) + 1;
+}
+
 async function onCand(c) {
   if (!c || !S.pc) return;
-  const t = / typ (\w+)/.exec(c.candidate || '')?.[1];
-  if (t) S.cands.remote[t] = (S.cands.remote[t] || 0) + 1;
+  countRemoteCand(c.candidate);
   if (!S.pc.remoteDescription) {
     S.pendingCands.push(c);
     return;
@@ -3109,7 +3130,7 @@ function updateStatus() {
       ? 'Голосовой звонок (камера выключена)'
       : 'Защищённое P2P-соединение активно'
     : S.bridgeActive
-    ? 'Голосовой мост через зашифрованный сигнал активен (без TURN/UDP)'
+    ? 'Голос идёт через мост. Видео появится, когда соединение станет прямым'
     : `Соединяемся с ${S.peer.name}…`;
 
   $('#conn').classList.toggle('hidden', isLive);
@@ -5000,6 +5021,8 @@ async function refreshPersonalUI() {
   if (!S.personalRoom) S.personalRoom = await deriveRoom(p.secret);
   const linkEl = $('#personalLink');
   if (linkEl) linkEl.value = personalLinkOf(p);
+  // v43: после «Сменить номер» открытый QR показывает уже новую ссылку.
+  if ($('#personalQr') && !$('#personalQr').classList.contains('hidden')) renderQr($('#personalQr'), personalLinkOf(p));
   startInboxListener();
   loadMissed().catch(() => {});
   updatePushUI();
@@ -5265,6 +5288,16 @@ $('#btnCreatePersonal') &&
   });
 $('#btnCopyPersonal') &&
   ($('#btnCopyPersonal').onclick = () => S.personal && copy(personalLinkOf(S.personal)));
+// v43: QR личной ссылки — собеседник наводит камеру телефона и сразу звонит.
+$('#btnQrPersonal') &&
+  ($('#btnQrPersonal').onclick = () => {
+    const q = $('#personalQr');
+    if (!q || !S.personal) return;
+    const show = q.classList.contains('hidden');
+    q.classList.toggle('hidden', !show);
+    $('#btnQrPersonal').setAttribute('aria-expanded', String(show));
+    if (show) renderQr(q, personalLinkOf(S.personal));
+  });
 $('#btnSharePersonal') &&
   ($('#btnSharePersonal').onclick = () =>
     S.personal &&

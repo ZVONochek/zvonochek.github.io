@@ -871,6 +871,13 @@ input[type='range']::-moz-range-thumb {
   max-width: 220px;
   height: auto;
 }
+/* v43: SVG из qrcode.js (scalable) — без width/height, только viewBox. В
+   контейнере width: fit-content (с v36) у него нулевая ширина: вместо QR был
+   белый кружок из паддинга. Ширину задаём явно. */
+.qr svg,
+.greet-qr svg {
+  width: min(220px, 64vw);
+}
 .safety-emoji {
   margin: 14px 0 6px;
   font-size: 34px;

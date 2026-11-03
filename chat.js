@@ -62,7 +62,7 @@
 //     цепочки — транзитом через 'drx'); при живой DR-сессии контент не
 //     в режиме d1 от собеседника не принимается (анти-downgrade);
 //   · сообщения ≤v30 расшифровываются статичными ключами, как раньше.
-import { CONFIG, getWorkerBase } from './config.js?v=42';
+import { CONFIG, getWorkerBase } from './config.js?v=43';
 import {
   b64u,
   newSecret,
@@ -121,7 +121,7 @@ import {
   genP256KeyPair,
   chainKeyAt,
   chainAdvanceSend,
-} from './crypto.js?v=42';
+} from './crypto.js?v=43';
 import {
   kvGet,
   kvPut,
@@ -131,10 +131,10 @@ import {
   kvDelPrefix,
   kvDelMany,
   normalizeRoomRecord,
-} from './store.js?v=42';
-import { coalesced } from './coalesce.js?v=42';
-import { plural } from './callstats.js?v=42';
-import { anonName, randomAnonName } from './anon-names.js?v=42';
+} from './store.js?v=43';
+import { coalesced } from './coalesce.js?v=43';
+import { plural } from './callstats.js?v=43';
+import { anonName, randomAnonName } from './anon-names.js?v=43';
 import {
   getChatDevice,
   getChatDeviceEcdh,
@@ -144,8 +144,8 @@ import {
   encryptWithVault,
   decryptWithVault,
   verifyDeviceCertClient,
-} from './identity.js?v=42';
-import { personKeyOf, groupPersons } from './sync-core.js?v=42';
+} from './identity.js?v=43';
+import { personKeyOf, groupPersons } from './sync-core.js?v=43';
 import {
   ChatTransportManager,
   FallbackTransport,
@@ -159,7 +159,7 @@ import {
   aggregateGcallState,
   gcallEventsFromEntries,
   shouldSweepRoom,
-} from './chat-transport.js?v=42';
+} from './chat-transport.js?v=43';
 
 const $ = (s, r = document) => r.querySelector(s);
 const te = new TextEncoder();
@@ -3722,7 +3722,8 @@ async function createInvite() {
         const q = qrcode(0, 'M');
         q.addData(greetLinkOf(code));
         q.make();
-        qr.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+        // v43: поле вокруг QR — 4 модуля (стандарт); на тёмном фоне 2 px не хватало.
+        qr.innerHTML = q.createSvgTag({ cellSize: 4, margin: 16, scalable: true });
       } catch {
         qr.textContent = '';
       }
@@ -5364,26 +5365,36 @@ function initChatUI() {
     const text = (myInput?.value || '').trim();
     if (!text || !cur) return;
     if (!cur.rec.nick) return note('Сначала введите никнейм.');
+    // v43: поле очищаем сразу, до отправки. Раньше оно очищалось после
+    // await sendMsg (шифрование + сеть): то, что человек успел набрать за это
+    // время, стиралось, а следующее Enter уходило в пустоту — так терялось
+    // каждое второе сообщение при быстрой отправке подряд.
+    const c = cur;
+    const editing = c.editing;
+    const replyTo = c.replyTo;
+    c.editing = null;
+    c.replyTo = null;
+    renderEditBar();
+    renderReplyBar();
+    myInput.value = '';
+    myInput.dispatchEvent(new Event('input')); // mic/send + черновик ниже
+    c.rec.draft = '';
+    saveRoom(c.rec).catch(() => {});
     try {
       // v27: режим редактирования — вместо нового сообщения уходит 'edit'.
-      if (cur.editing) {
-        await sendMsg('edit', JSON.stringify({ target: cur.editing.hash, text }));
-        cur.editing = null;
-        renderEditBar();
-      } else {
-        const extra = cur.replyTo ? { replyTo: cur.replyTo } : null;
-        await sendMsg('text', text, extra);
-        cur.replyTo = null;
-        renderReplyBar();
-      }
-      myInput.value = '';
-      myInput.dispatchEvent(new Event('input')); // mic/send + черновик ниже
-      if (cur) {
-        cur.rec.draft = '';
-        saveRoom(cur.rec).catch(() => {});
-      }
+      if (editing) await sendMsg('edit', JSON.stringify({ target: editing.hash, text }));
+      else await sendMsg('text', text, replyTo ? { replyTo } : null);
     } catch (e) {
       note(e.message);
+      // Не отправилось — возвращаем текст, если поле ещё пустое.
+      if (cur === c && !myInput.value) {
+        myInput.value = text;
+        c.editing = editing;
+        c.replyTo = replyTo;
+        renderEditBar();
+        renderReplyBar();
+        myInput.dispatchEvent(new Event('input'));
+      }
     }
   };
   if (send) send.onclick = doSend;
