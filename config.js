@@ -60,39 +60,20 @@ export const CONFIG = {
   // TURN от Metered.ca (если используется динамический API-ключ на клиенте)
   METERED: { domain: '', apiKey: '' },
 
-  // v37, решение владельца (бета, пользуется только владелец): статические
-  // TURN-логины снова лежат прямо в клиенте — без Worker и без банковской
-  // карты (Cloudflare Realtime TURN требует карту). Известный компромисс:
-  // логины видны в публичном репозитории, и чужие могут выбрать бесплатную
-  // квоту — тогда TURN откажет, и сработают остальные пути (Worker /turn,
-  // METERED-ключ, прямое соединение). Если квоту «съедят» — просто заменить
-  // логины здесь на новые (бесплатная регистрация на metered.ca / expressturn.com).
-  // v38: TURN — КРАЙНЕЕ средство (беречь бесплатные лимиты): звонок всегда
-  // стартует напрямую (STUN), а эти серверы подключаются, только если прямой
-  // путь не встал за 6 с, ICE упал или включён режим «только TURN».
-  // Порядок важен: 443/TLS и TCP — для сетей, где режут UDP.
-  EXTRA_ICE_SERVERS: [
-    { urls: 'stun:stun.relay.metered.ca:80' },
-    {
-      urls: [
-        'turns:global.relay.metered.ca:443?transport=tcp',
-        'turn:global.relay.metered.ca:443',
-        'turn:global.relay.metered.ca:80?transport=tcp',
-        'turn:global.relay.metered.ca:80',
-      ],
-      username: 'b0cc17f06cf20504ab5cd581',
-      credential: 'YSV26ACRA6JxZ8TQ',
-    },
-    // Запасной TURN: ExpressTURN
-    {
-      urls: [
-        'turn:free.expressturn.com:3478?transport=tcp',
-        'turn:free.expressturn.com:3478',
-      ],
-      username: '000000002107165853',
-      credential: '3T1HHXm3M1UWIyZ3pOzBv5EwRbI=',
-    },
-  ],
+  // v45: статических TURN-логинов в клиенте БОЛЬШЕ НЕТ. Прежние креды
+  // Metered/ExpressTURN (v37, «бета только для владельца») лежали в
+  // публичном репозитории, и любой мог выбрать бесплатную квоту; они
+  // остаются в git-истории до v44 и подлежат отзыву у провайдеров.
+  // Замена — Cloudflare TURN ниже: креды эфемерные, секретов в клиенте нет.
+  EXTRA_ICE_SERVERS: [],
+
+  // v45: Cloudflare TURN — отдельный Worker zvonochek-turn в отдельном
+  // аккаунте Cloudflare. Отдаёт временные (TTL 1 час) TURN-креды
+  // turn.cloudflare.com; секрет TURN-ключа лежит только в секретах
+  // этого Worker, доступ к эндпоинту — только с origin сайта.
+  // TURN по-прежнему КРАЙНЕЕ средство (v38): старт звонка — напрямую
+  // (STUN), эндпоинт дёргается только лестницей ensureTurnLoaded.
+  TURN_CF_URL: 'https://zvonochek-turn.monbim322.workers.dev/turn',
 };
 
 // ---------- v28: «Свой сервер» — единый резолвер адреса Worker ----------

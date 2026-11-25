@@ -1,8 +1,8 @@
 // chat-call.js — Живой групповой звонок в чате и дозвон из чата через Inbox
 // v44: вынесено из chat.js без изменения логики (строки 4912–5152 v43).
-import { aggregateGcallState, gcallEventsFromEntries } from './chat-transport.js?v=44';
-import { newSecret } from './crypto.js?v=44';
-import { $, cur, knownMembers, memberEcdhPub, nickOf, note, roomMessages, sendMsg } from './chat.js?v=44';
+import { aggregateGcallState, gcallEventsFromEntries } from './chat-transport.js?v=45';
+import { newSecret } from './crypto.js?v=45';
+import { $, cur, knownMembers, memberEcdhPub, nickOf, note, roomMessages, sendMsg } from './chat.js?v=45';
 
 // ---------- v29 (B): живой групповой звонок в чате ----------
 // Модель: состояние звонка — подписанные 'gcall-state' сообщения в ленте

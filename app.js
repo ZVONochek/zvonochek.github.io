@@ -1,12 +1,12 @@
-import { CONFIG, getWorkerBase, setWorkerBase, normalizeWorkerUrl, DEFAULT_WORKER_URL } from './config.js?v=44';
-import { newSecret, deriveRoom, safetyCode, safetyCodeBridge, b64u, seal, open as openSealed, genP256KeyPair, sha256hex } from './crypto.js?v=44';
-import { hasPersonal, getPersonal, ensurePersonal, signWithDevice, signWithKey, personalLinkOf, fpOfPubRaw, getChatDeviceEcdh, rotatePersonal, encryptWithVault, decryptWithVault, adminSigner, resetIdentityCache } from './identity.js?v=44';
-import { inboxRegister, inboxRing, inboxRingState, inboxAck, inboxAnswer, inboxCancel, inboxMissed, inboxMissedAck, inboxRetire, InboxListener } from './inbox.js?v=44';
-import { kvGet, kvPut, kvAll, kvDel, wipeDatabase } from './store.js?v=44';
-import { Signaling } from './signaling.js?v=44';
-import { ROUTE_SHORT, readCounters, deriveSample, bridgeSample, CallRecorder, journalDigest, plural } from './callstats.js?v=44';
-import { renderLiveStats, renderCallsDashboard, renderCallsList, renderContactsList } from './stats-ui.js?v=44';
-import { anonName, randomAnonName } from './anon-names.js?v=44';
+import { CONFIG, getWorkerBase, setWorkerBase, normalizeWorkerUrl, DEFAULT_WORKER_URL } from './config.js?v=45';
+import { newSecret, deriveRoom, safetyCode, safetyCodeBridge, b64u, seal, open as openSealed, genP256KeyPair, sha256hex } from './crypto.js?v=45';
+import { hasPersonal, getPersonal, ensurePersonal, signWithDevice, signWithKey, personalLinkOf, fpOfPubRaw, getChatDeviceEcdh, rotatePersonal, encryptWithVault, decryptWithVault, adminSigner, resetIdentityCache } from './identity.js?v=45';
+import { inboxRegister, inboxRing, inboxRingState, inboxAck, inboxAnswer, inboxCancel, inboxMissed, inboxMissedAck, inboxRetire, InboxListener } from './inbox.js?v=45';
+import { kvGet, kvPut, kvAll, kvDel, wipeDatabase } from './store.js?v=45';
+import { Signaling } from './signaling.js?v=45';
+import { ROUTE_SHORT, readCounters, deriveSample, bridgeSample, CallRecorder, journalDigest, plural } from './callstats.js?v=45';
+import { renderLiveStats, renderCallsDashboard, renderCallsList, renderContactsList } from './stats-ui.js?v=45';
+import { anonName, randomAnonName } from './anon-names.js?v=45';
 import {
   startDevices,
   hasOtherDevices,
@@ -16,17 +16,17 @@ import {
   rotateWithDevices,
   openAdminLink,
   SYNC_SETTINGS,
-} from './devices.js?v=44';
-import { VQ_CHOICES, deviceClass, captureTier, tierConstraints, rxCap, parseCap, videoEncoding, QLEVELS, audioCodecOrder, videoCodecOrder, CLASS_TEXT, sdpFirstCodec, audioRoute, echoWanted } from './media-policy.js?v=44';
-import { ensurePushSub, loadMissed, updatePushUI, initPushUi } from './push-ui.js?v=44';
-import { refreshPersonalUI, startInboxListener, initNumberAdmin } from './number-admin.js?v=44';
-import { callPeer, contactsLoad, openContactMenu, peerName, rememberPeer, renderContacts, shareBackOn, syncLocal, touchPeer, initContacts } from './contacts.js?v=44';
-import { adaptLoad, applyCodecPrefs, onViewChange, reapplyMediaLoad, sendRxCap, showBridgeSafety, showSafety, viewHidden, watchDeviceLoad, initMediaLoad } from './media-load.js?v=44';
-import { applyQuality, noteCodecs, startStats, initCallStatsUi } from './call-stats-ui.js?v=44';
-import { activateBridge, playBridgeVoice, playBridgeVoice2, stopBridge, upgradeBridge2, initBridge } from './bridge.js?v=44';
-import { applyMicProcessing, attachMicToEngine, attachRemoteToEngine, ensureAudioEngine, isProcTrack, paintEchoState, paintMicTest, recoverRemoteAudio, refreshAudioRoute, setEchoMode, stopMeterLoop, stopMicTest, syncAudioParams, toggleMicTest, initAudioEngine } from './audio-engine.js?v=44';
+} from './devices.js?v=45';
+import { VQ_CHOICES, deviceClass, captureTier, tierConstraints, rxCap, parseCap, videoEncoding, QLEVELS, audioCodecOrder, videoCodecOrder, CLASS_TEXT, sdpFirstCodec, audioRoute, echoWanted } from './media-policy.js?v=45';
+import { ensurePushSub, loadMissed, updatePushUI, initPushUi } from './push-ui.js?v=45';
+import { refreshPersonalUI, startInboxListener, initNumberAdmin } from './number-admin.js?v=45';
+import { callPeer, contactsLoad, openContactMenu, peerName, rememberPeer, renderContacts, shareBackOn, syncLocal, touchPeer, initContacts } from './contacts.js?v=45';
+import { adaptLoad, applyCodecPrefs, onViewChange, reapplyMediaLoad, sendRxCap, showBridgeSafety, showSafety, viewHidden, watchDeviceLoad, initMediaLoad } from './media-load.js?v=45';
+import { applyQuality, noteCodecs, startStats, initCallStatsUi } from './call-stats-ui.js?v=45';
+import { activateBridge, playBridgeVoice, playBridgeVoice2, stopBridge, upgradeBridge2, initBridge } from './bridge.js?v=45';
+import { applyMicProcessing, attachMicToEngine, attachRemoteToEngine, ensureAudioEngine, isProcTrack, paintEchoState, paintMicTest, recoverRemoteAudio, refreshAudioRoute, setEchoMode, stopMeterLoop, stopMicTest, syncAudioParams, toggleMicTest, initAudioEngine } from './audio-engine.js?v=45';
 
-export const APP_VERSION = 44;
+export const APP_VERSION = 45;
 export const APP_BUILD = '2026-11-01';
 // Версия разработки пишется из одного места: главная (бейдж и подпись),
 // экран подготовки, карточка подключения в начале звонка.
@@ -41,7 +41,7 @@ export const setBtnIcon = (sel, name) => setUse((typeof sel === 'string' ? $(sel
 
 // Регистрация Service Worker для быстрого старта и работы PWA
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js?v=44').catch(() => {});
+  navigator.serviceWorker.register('./sw.js?v=45').catch(() => {});
 }
 
 // Автообновление: если на сайте вышла новая версия, а браузер держит старую из кэша — перезагружаемся.
@@ -974,11 +974,12 @@ export async function fetchJson(url, ms = 4000) {
 }
 const isTurn = (s) => [].concat(s?.urls || []).some((u) => /^turns?:/.test(u));
 
-// v38: статический TURN из config.js — КРАЙНЕЕ средство (решение владельца:
-// беречь бесплатные лимиты). Старт звонка — только STUN (direct); TURN
-// добавляется лестницей ensureTurnLoaded: direct не встал за 6 с, ICE failed,
-// смена сети без direct или ручной режим «только TURN». Пока прямой путь
-// работает, к TURN-серверам нет даже аллокаций.
+// v38: TURN — КРАЙНЕЕ средство (беречь бесплатные лимиты). Старт звонка —
+// только STUN (direct); TURN добавляется лестницей ensureTurnLoaded:
+// direct не встал за 6 с, ICE failed, смена сети без direct или ручной
+// режим «только TURN». Пока прямой путь работает, к TURN-серверам нет
+// даже аллокаций. v45: источник TURN — Cloudflare (эфемерные креды),
+// статических логинов в config.js больше нет.
 const staticTurn = () => (CONFIG.EXTRA_ICE_SERVERS || []).filter(isTurn);
 
 async function loadIce() {
@@ -995,13 +996,26 @@ async function loadIce() {
   return S.baseIce;
 }
 
-// TURN по требованию: свой Worker (/turn, если в нём настроены секреты TURN),
-// динамический Metered API (CONFIG.METERED) и статический TURN из config.js.
+// TURN по требованию: Cloudflare TURN (CONFIG.TURN_CF_URL, эфемерные
+// креды отдельного Worker), свой Worker (/turn, если в нём настроены
+// секреты TURN), динамический Metered API (CONFIG.METERED) и статический
+// TURN из config.js (v45: пуст, оставлен как форма резерва).
 // Вызывается только из лестницы ensureTurnLoaded — не на старте звонка.
 async function fetchTurnServers() {
   const out = [];
   const info = [];
   const jobs = [];
+  if (CONFIG.TURN_CF_URL) {
+    jobs.push(
+      fetchJson(CONFIG.TURN_CF_URL)
+        .then((j) => {
+          const l = (j?.iceServers ? [].concat(j.iceServers) : []).filter(isTurn);
+          out.push(...l);
+          info.push(l.length ? 'Cloudflare TURN: есть' : 'Cloudflare TURN: пусто');
+        })
+        .catch(() => info.push('Cloudflare TURN недоступен'))
+    );
+  }
   if (getWorkerBase()) {
     jobs.push(
       fetchJson(getWorkerBase().replace(/\/$/, '') + '/turn')

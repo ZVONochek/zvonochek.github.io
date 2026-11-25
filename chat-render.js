@@ -1,10 +1,10 @@
 // chat-render.js — Отрисовка сообщений и списка
 // v44: вынесено из chat.js без изменения логики (строки 4390–4912 v43).
-import { RECEIPT_GLYPHS, RECEIPT_LABELS, gcallEventsFromEntries, receiptState } from './chat-transport.js?v=44';
-import { kvDelMany } from './store.js?v=44';
-import { openCallFromChat, updateGcallBanner } from './chat-call.js?v=44';
-import { $, CONTROL_TYPES, GCALL_HB_KEEP_MS, RENDER_PAGE, TOUCH_UI, avatarBg, cur, dayLabel, excerptOf, fileState, fmtSize, fmtTime, isGcallHb, isOwnEntry, knownMembers, knownPersons, newDevKind, openMsgMenu, personOf, personReceipts, renderEditBar, renderPinBar, renderReplyBar, renderTextWithMarks, roomMessages, scrollToMessage, toggleReaction, touchRoomMsgs, ttlLabel } from './chat.js?v=44';
-import { downloadFile, fmtDur, renderFileCardState, wireVoicePlayer } from './chat-files.js?v=44';
+import { RECEIPT_GLYPHS, RECEIPT_LABELS, gcallEventsFromEntries, receiptState } from './chat-transport.js?v=45';
+import { kvDelMany } from './store.js?v=45';
+import { openCallFromChat, updateGcallBanner } from './chat-call.js?v=45';
+import { $, CONTROL_TYPES, GCALL_HB_KEEP_MS, RENDER_PAGE, TOUCH_UI, avatarBg, cur, dayLabel, excerptOf, fileState, fmtSize, fmtTime, isGcallHb, isOwnEntry, knownMembers, knownPersons, newDevKind, openMsgMenu, personOf, personReceipts, renderEditBar, renderPinBar, renderReplyBar, renderTextWithMarks, roomMessages, scrollToMessage, toggleReaction, touchRoomMsgs, ttlLabel } from './chat.js?v=45';
+import { downloadFile, fmtDur, renderFileCardState, wireVoicePlayer } from './chat-files.js?v=45';
 
 // ---------- Рендер ----------
 // Карточка пустой ленты (по центру свободного места, как в Telegram).

@@ -1,12 +1,12 @@
 // push-ui.js — Web Push: автоподписка, кнопки уведомлений и пропущенные звонки
 // v44: вынесено из app.js без изменения логики (строки 5349–5498 v43).
-import { anonName } from './anon-names.js?v=44';
-import { b64u, open as openSealed } from './crypto.js?v=44';
-import { getWorkerBase } from './config.js?v=44';
-import { inboxMissed, inboxMissedAck, inboxRegister } from './inbox.js?v=44';
-import { renderCallsList } from './stats-ui.js?v=44';
-import { $, S, fetchJson, toast } from './app.js?v=44';
-import { backOf, callPeer, contactsLoad, openContactMenu, rememberPeer } from './contacts.js?v=44';
+import { anonName } from './anon-names.js?v=45';
+import { b64u, open as openSealed } from './crypto.js?v=45';
+import { getWorkerBase } from './config.js?v=45';
+import { inboxMissed, inboxMissedAck, inboxRegister } from './inbox.js?v=45';
+import { renderCallsList } from './stats-ui.js?v=45';
+import { $, S, fetchJson, toast } from './app.js?v=45';
+import { backOf, callPeer, contactsLoad, openContactMenu, rememberPeer } from './contacts.js?v=45';
 
 // ---------- v38: Web Push — автоподписка и регистрация везде ----------
 // Раньше подписка жила только до перезагрузки (S.pushSub не восстанавливался),

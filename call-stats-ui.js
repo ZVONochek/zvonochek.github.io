@@ -1,11 +1,11 @@
 // call-stats-ui.js — Статистика звонка и панель «Качество связи»
 // v44: вынесено из app.js без изменения логики (строки 3225–3402 v43).
-import { CLASS_TEXT, QLEVELS, sdpFirstCodec, videoEncoding } from './media-policy.js?v=44';
-import { CallRecorder, ROUTE_SHORT, bridgeSample, deriveSample, readCounters } from './callstats.js?v=44';
-import { adaptLoad, viewHidden } from './media-load.js?v=44';
-import { renderLiveStats } from './stats-ui.js?v=44';
-import { $, S, countRoute, localTrack, log, progress, setUse, toast, updateStatus } from './app.js?v=44';
-import { recoverRemoteAudio } from './audio-engine.js?v=44';
+import { CLASS_TEXT, QLEVELS, sdpFirstCodec, videoEncoding } from './media-policy.js?v=45';
+import { CallRecorder, ROUTE_SHORT, bridgeSample, deriveSample, readCounters } from './callstats.js?v=45';
+import { adaptLoad, viewHidden } from './media-load.js?v=45';
+import { renderLiveStats } from './stats-ui.js?v=45';
+import { $, S, countRoute, localTrack, log, progress, setUse, toast, updateStatus } from './app.js?v=45';
+import { recoverRemoteAudio } from './audio-engine.js?v=45';
 
 // ---------- Статистика звонка (v36: callstats.js + панель «Качество связи») ----------
 export const ROUTE_TEXT = { p2p: 'напрямую P2P', lan: 'напрямую (LAN)', turn: 'через TURN' };

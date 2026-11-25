@@ -1,11 +1,11 @@
 // chat-push.js — Push и комнаты, живой фон для неоткрытых комнат
 // v44: вынесено из chat.js без изменения логики (строки 6086–6396 v43).
-import { b64u, codeAddrForScheme, deriveChatKeys, derivePinIkm, parseBlobHint, pubTagOf, tagBytesEq } from './crypto.js?v=44';
-import { decryptWithVault, getChatDevice } from './identity.js?v=44';
-import { kvAll } from './store.js?v=44';
-import { $, api, closeCurrent, cur, existingPushSub, initChatUI, loadRoom, maybeNotifyMessage, myProfile, note, openRoomBySeed, renderRoomList, roomSummaryCache, saveRoom, sendDialInfoIfNeeded, showChatScreen, wipeLocalRoom } from './chat.js?v=44';
-import { pairApi, redeemGreet, redeemJoin } from './chat-invite.js?v=44';
-import { fetchMissed } from './chat-delivery.js?v=44';
+import { b64u, codeAddrForScheme, deriveChatKeys, derivePinIkm, parseBlobHint, pubTagOf, tagBytesEq } from './crypto.js?v=45';
+import { decryptWithVault, getChatDevice } from './identity.js?v=45';
+import { kvAll } from './store.js?v=45';
+import { $, api, closeCurrent, cur, existingPushSub, initChatUI, loadRoom, maybeNotifyMessage, myProfile, note, openRoomBySeed, renderRoomList, roomSummaryCache, saveRoom, sendDialInfoIfNeeded, showChatScreen, wipeLocalRoom } from './chat.js?v=45';
+import { pairApi, redeemGreet, redeemJoin } from './chat-invite.js?v=45';
+import { fetchMissed } from './chat-delivery.js?v=45';
 
 // ---------- v38: push и комнаты ----------
 // Открыть комнату по префиксу id (из уведомления SW).

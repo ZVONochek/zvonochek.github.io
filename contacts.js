@@ -1,9 +1,9 @@
 // contacts.js — Адресная книга: контакты и «обратные номера»
 // v44: вынесено из app.js без изменения логики (строки 4435–4768 v43).
-import { decryptWithVault, encryptWithVault } from './identity.js?v=44';
-import { kvGet, kvPut } from './store.js?v=44';
-import { renderContactsList } from './stats-ui.js?v=44';
-import { $, S, parseCallLink, renderCalls, route, toast } from './app.js?v=44';
+import { decryptWithVault, encryptWithVault } from './identity.js?v=45';
+import { kvGet, kvPut } from './store.js?v=45';
+import { renderContactsList } from './stats-ui.js?v=45';
+import { $, S, parseCallLink, renderCalls, route, toast } from './app.js?v=45';
 
 // ---------- v38: адресная книга (контакты и «обратные номера») ----------
 // identity/contacts: {v:1, items:{[fp]: {fp, name, secretEnc, saved, addedAt, lastAt}}}.

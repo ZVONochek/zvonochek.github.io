@@ -1,10 +1,10 @@
 // chat-net.js — Транспортный менеджер, резервный канал и WebSocket
 // v44: вынесено из chat.js без изменения логики (строки 3173–3395 v43).
-import { CONFIG } from './config.js?v=44';
-import { ChatTransportManager, FallbackTransport } from './chat-transport.js?v=44';
-import { getChatNostrSecret } from './identity.js?v=44';
-import { $, ONLINE, api, chatBase, cur, putMsg, renderMembersList, renderPresence, roomMessages, saveRoom, status, workerBase } from './chat.js?v=44';
-import { applyPresence, applyReceipt, fetchMissed, ingest, sendReadAck } from './chat-delivery.js?v=44';
+import { CONFIG } from './config.js?v=45';
+import { ChatTransportManager, FallbackTransport } from './chat-transport.js?v=45';
+import { getChatNostrSecret } from './identity.js?v=45';
+import { $, ONLINE, api, chatBase, cur, putMsg, renderMembersList, renderPresence, roomMessages, saveRoom, status, workerBase } from './chat.js?v=45';
+import { applyPresence, applyReceipt, fetchMissed, ingest, sendReadAck } from './chat-delivery.js?v=45';
 
 // ---------- v28: транспортный менеджер и резервный канал ----------
 // Основной канал — воркер (WS + HTTP, поведение не менялось). При его
