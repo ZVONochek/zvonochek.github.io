@@ -1,9 +1,9 @@
 // media-load.js — Нагрузка устройства → ступени видео, порядок кодеков, код сверки
 // v44: вынесено из app.js без изменения логики (строки 3402–3584 v43).
-import { audioCodecOrder, captureTier, rxCap, tierConstraints, videoCodecOrder } from './media-policy.js?v=45';
-import { safetyCode, safetyCodeBridge } from './crypto.js?v=45';
-import { $, S, loadOpts, localTrack, log, openModal, selfId, sendCtrl, toast } from './app.js?v=45';
-import { applyQuality } from './call-stats-ui.js?v=45';
+import { audioCodecOrder, captureTier, rxCap, tierConstraints, videoCodecOrder } from './media-policy.js?v=46';
+import { safetyCode, safetyCodeBridge } from './crypto.js?v=46';
+import { $, S, loadOpts, localTrack, log, openModal, selfId, sendCtrl, toast } from './app.js?v=46';
+import { applyQuality } from './call-stats-ui.js?v=46';
 
 // ---------- v37: нагрузка устройства → ступени видео (против нагрева) ----------
 // Chrome сообщает qualityLimitationReason='cpu', когда кодер не успевает.

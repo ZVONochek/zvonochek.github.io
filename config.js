@@ -74,6 +74,13 @@ export const CONFIG = {
   // TURN по-прежнему КРАЙНЕЕ средство (v38): старт звонка — напрямую
   // (STUN), эндпоинт дёргается только лестницей ensureTurnLoaded.
   TURN_CF_URL: 'https://zvonochek-turn.monbim322.workers.dev/turn',
+
+  // v46: резерв владельца (Metered + ExpressTURN) — те же логины, что
+  // до v44 лежали статикой в этом файле, но теперь они спрятаны в
+  // секретах отдельного Worker zvonochek-turn-reserve и отдаются
+  // только с origin сайта. В публичном коде их больше нет; в лестнице
+  // резерв идёт после Cloudflare TURN и сигнального Worker.
+  TURN_RESERVE_URL: 'https://zvonochek-turn-reserve.monbim322.workers.dev/turn',
 };
 
 // ---------- v28: «Свой сервер» — единый резолвер адреса Worker ----------

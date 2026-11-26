@@ -1,8 +1,8 @@
 // chat-invite.js — Код приветствия, постоянная короткая ссылка и кодовое слово
 // v44: вынесено из chat.js без изменения логики (строки 3675–4039 v43).
-import { b64u, codeAccess, codeAddrForScheme, newGreetCode, newJoinCode, normalizeWordPhrase, openCodeBlob, sealCodeBlob, sha256hex } from './crypto.js?v=45';
-import { decryptWithVault, encryptWithVault } from './identity.js?v=45';
-import { $, cur, fmtDayTime, greetLinkOf, joinLinkOf, note, openRoomBySeed, saveRoom, workerBase } from './chat.js?v=45';
+import { b64u, codeAccess, codeAddrForScheme, newGreetCode, newJoinCode, normalizeWordPhrase, openCodeBlob, sealCodeBlob, sha256hex } from './crypto.js?v=46';
+import { decryptWithVault, encryptWithVault } from './identity.js?v=46';
+import { $, cur, fmtDayTime, greetLinkOf, joinLinkOf, note, openRoomBySeed, saveRoom, workerBase } from './chat.js?v=46';
 
 // ---------- Код приветствия (v25) ----------
 export async function pairApi(path, body) {

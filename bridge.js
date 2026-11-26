@@ -1,10 +1,10 @@
 // bridge.js — Аварийный аудио-мост через сигналинг (1.0 MediaRecorder, 2.0 WebCodecs Opus)
 // v44: вынесено из app.js без изменения логики (строки 1829–2199 v43).
-import { b64u } from './crypto.js?v=45';
-import { showBridgeSafety, showSafety } from './media-load.js?v=45';
-import { startStats } from './call-stats-ui.js?v=45';
-import { $, APP_VERSION, S, beep, countRoute, log, rosterCount, sysMsg, toast, updateStatus, webCodecsBridgeSupported } from './app.js?v=45';
-import { ensureAudioEngine, liveProcTrack, syncAudioParams } from './audio-engine.js?v=45';
+import { b64u } from './crypto.js?v=46';
+import { showBridgeSafety, showSafety } from './media-load.js?v=46';
+import { startStats } from './call-stats-ui.js?v=46';
+import { $, APP_VERSION, S, beep, countRoute, log, rosterCount, sysMsg, toast, updateStatus, webCodecsBridgeSupported } from './app.js?v=46';
+import { ensureAudioEngine, liveProcTrack, syncAudioParams } from './audio-engine.js?v=46';
 
 // ---------- Аварийный Аудио-Мост через Сигналинг (работает вообще без TURN и без UDP!) ----------
 export function activateBridge(reason = 'Активирован аудио-мост через сигналинг') {

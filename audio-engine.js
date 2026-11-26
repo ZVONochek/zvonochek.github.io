@@ -1,7 +1,7 @@
 // audio-engine.js — Аудио-движок (Web Audio: громкость 0–200 %, VAD, компрессор, проверка микрофона) и эхоподавление «Авто»
 // v44: вынесено из app.js без изменения логики (строки 450–1020 v43).
-import { audioRoute, echoWanted } from './media-policy.js?v=45';
-import { $, S, audioC, log, route, setBtnIcon, setUse, switchDevice, toast } from './app.js?v=45';
+import { audioRoute, echoWanted } from './media-policy.js?v=46';
+import { $, S, audioC, log, route, setBtnIcon, setUse, switchDevice, toast } from './app.js?v=46';
 
 // ---------- Аудио-движок Discord (Web Audio API: 0-200% Gain, VAD, Compressor, Loopback) ----------
 export function ensureAudioEngine() {
