@@ -96,7 +96,8 @@ export default {
       const hasTurn = !!(
         (env.TURN_KEY_ID && env.TURN_KEY_API_TOKEN) ||
         (env.METERED_DOMAIN && (env.METERED_API_KEY || env.METERED_API_TOKEN)) ||
-        (env.TURN_URLS && env.TURN_USERNAME && env.TURN_CREDENTIAL)
+        (env.TURN_URLS && env.TURN_USERNAME && env.TURN_CREDENTIAL) ||
+        (env.TURN2_URLS && env.TURN2_USERNAME && env.TURN2_CREDENTIAL)
       );
       return json({ ok: true, app: 'ZVONochek', v: 44, guard: !!env.GUARD, turn: hasTurn, inbox: !!env.INBOX, chat: !!env.CHAT_ROOMS, pair: !!env.PAIRING, alias: !!env.PAIRING, backup: !!env.PAIRING, word: !!env.PAIRING, ratchet: !!env.CHAT_ROOMS, push: vapidAvailable(env), pushRepeat: true, retention: 'v38', devices: true, revoke: !!env.INBOX, linkNx: !!env.PAIRING, owner: !!env.INBOX, pushCrypto: 'v41', ts: Date.now() }, 200, cors);
     }
@@ -247,7 +248,8 @@ export default {
       const turnConfigured = !!(
         (env.TURN_KEY_ID && env.TURN_KEY_API_TOKEN) ||
         (env.METERED_DOMAIN && (env.METERED_API_KEY || env.METERED_API_TOKEN)) ||
-        (env.TURN_URLS && env.TURN_USERNAME && env.TURN_CREDENTIAL)
+        (env.TURN_URLS && env.TURN_USERNAME && env.TURN_CREDENTIAL) ||
+        (env.TURN2_URLS && env.TURN2_USERNAME && env.TURN2_CREDENTIAL)
       );
       if (turnConfigured) {
         const perIp = await guardAllows(env, 'ip:' + clientIp, ['turn']);
@@ -301,6 +303,17 @@ export default {
           urls: env.TURN_URLS.split(',').map((u) => u.trim()),
           username: env.TURN_USERNAME,
           credential: env.TURN_CREDENTIAL,
+        });
+      }
+
+      // Провайдер 4: второй статический TURN из секретов TURN2_*
+      // (28.11.2026: ExpressTURN владельца — раньше лежал статикой в
+      // клиенте до v44, теперь отдаётся только отсюда, из секретов).
+      if (env.TURN2_URLS && env.TURN2_USERNAME && env.TURN2_CREDENTIAL) {
+        list.push({
+          urls: env.TURN2_URLS.split(',').map((u) => u.trim()),
+          username: env.TURN2_USERNAME,
+          credential: env.TURN2_CREDENTIAL,
         });
       }
 
