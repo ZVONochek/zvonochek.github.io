@@ -62,7 +62,7 @@
 //     цепочки — транзитом через 'drx'); при живой DR-сессии контент не
 //     в режиме d1 от собеседника не принимается (анти-downgrade);
 //   · сообщения ≤v30 расшифровываются статичными ключами, как раньше.
-import { CONFIG, getWorkerBase } from './config.js?v=46';
+import { CONFIG, getWorkerBase } from './config.js?v=47';
 import {
   b64u,
   newSecret,
@@ -121,7 +121,7 @@ import {
   genP256KeyPair,
   chainKeyAt,
   chainAdvanceSend,
-} from './crypto.js?v=46';
+} from './crypto.js?v=47';
 import {
   kvGet,
   kvPut,
@@ -131,10 +131,10 @@ import {
   kvDelPrefix,
   kvDelMany,
   normalizeRoomRecord,
-} from './store.js?v=46';
-import { coalesced } from './coalesce.js?v=46';
-import { plural } from './callstats.js?v=46';
-import { anonName, randomAnonName } from './anon-names.js?v=46';
+} from './store.js?v=47';
+import { coalesced } from './coalesce.js?v=47';
+import { plural } from './callstats.js?v=47';
+import { anonName, randomAnonName } from './anon-names.js?v=47';
 import {
   getChatDevice,
   getChatDeviceEcdh,
@@ -144,8 +144,8 @@ import {
   encryptWithVault,
   decryptWithVault,
   verifyDeviceCertClient,
-} from './identity.js?v=46';
-import { personKeyOf, groupPersons } from './sync-core.js?v=46';
+} from './identity.js?v=47';
+import { personKeyOf, groupPersons } from './sync-core.js?v=47';
 import {
   ChatTransportManager,
   FallbackTransport,
@@ -159,14 +159,14 @@ import {
   aggregateGcallState,
   gcallEventsFromEntries,
   shouldSweepRoom,
-} from './chat-transport.js?v=46';
-import { aliasRenewIfDue, checkHash, onIdentityChanged, openRoomByPrefix, ownTagCache, registerPushInRooms, standaloneKeys, startRoomSweep, sweepOtherRooms, sweepState, unsubscribeRoom, initChatPush } from './chat-push.js?v=46';
-import { dialMember, joinGcall, leaveGcall, onCallEnded, openCallFromChat, startOrJoinGcall, updateGcallBanner } from './chat-call.js?v=46';
-import { renderMessagesNow } from './chat-render.js?v=46';
-import { aliasCreate, aliasRevokeCurrent, createInvite, pairApi, redeemCode, redeemGreet, redeemJoin, redeemWord, renderAliasBox, renderWordBox, renderWordHint, wordDisable, wordEnable, wordParts, wordRevokeCurrent } from './chat-invite.js?v=46';
-import { startVoiceRec, stopVoiceRec, uploadFile } from './chat-files.js?v=46';
-import { connectWs, setupTransport, initChatNet } from './chat-net.js?v=46';
-import { applyHistFloor, chatVisible, fetchMissed, flushAcks, healHistory, queueStubsForRetry, resyncRoom, scheduleFetchMissed, scheduleRetry, syncState, verifyMemberCerts } from './chat-delivery.js?v=46';
+} from './chat-transport.js?v=47';
+import { aliasRenewIfDue, checkHash, onIdentityChanged, openRoomByPrefix, ownTagCache, registerPushInRooms, standaloneKeys, startRoomSweep, sweepOtherRooms, sweepState, unsubscribeRoom, initChatPush } from './chat-push.js?v=47';
+import { dialMember, joinGcall, leaveGcall, onCallEnded, openCallFromChat, startOrJoinGcall, updateGcallBanner } from './chat-call.js?v=47';
+import { renderMessagesNow } from './chat-render.js?v=47';
+import { aliasCreate, aliasRevokeCurrent, createInvite, pairApi, redeemCode, redeemGreet, redeemJoin, redeemWord, renderAliasBox, renderWordBox, renderWordHint, wordDisable, wordEnable, wordParts, wordRevokeCurrent } from './chat-invite.js?v=47';
+import { startVoiceRec, stopVoiceRec, uploadFile } from './chat-files.js?v=47';
+import { connectWs, setupTransport, initChatNet } from './chat-net.js?v=47';
+import { applyHistFloor, chatVisible, fetchMissed, flushAcks, healHistory, queueStubsForRetry, resyncRoom, scheduleFetchMissed, scheduleRetry, syncState, verifyMemberCerts } from './chat-delivery.js?v=47';
 
 export const $ = (s, r = document) => r.querySelector(s);
 const te = new TextEncoder();

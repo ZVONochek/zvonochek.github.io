@@ -1,9 +1,9 @@
 // chat-delivery.js — Доставка и прочтение, пакетные ack, очередь повтора нерасшифрованных
 // v44: вынесено из chat.js без изменения логики (строки 2595–3173 v43).
-import { b64u, drDowngradeBlocked, hashChatBlob } from './crypto.js?v=46';
-import { kvGet } from './store.js?v=46';
-import { verifyChatSig, verifyDeviceCertClient } from './identity.js?v=46';
-import { $, CONTROL_TYPES, api, applyControlMessage, applyEpochMessage, canonical, cur, decryptIncoming, handleDrInit, handleRemoteDeleted, maybeNotifyMessage, maybeStartDr, note, noteRoomDevice, ownDev, previewOf, renderMembersList, renderMessages, renderPresence, renderRoomList, roomMessages, roomQueue, saveRoom, storeMessage, storeRatchetMiss, suspendDr } from './chat.js?v=46';
+import { b64u, drDowngradeBlocked, hashChatBlob } from './crypto.js?v=47';
+import { kvGet } from './store.js?v=47';
+import { verifyChatSig, verifyDeviceCertClient } from './identity.js?v=47';
+import { $, CONTROL_TYPES, api, applyControlMessage, applyEpochMessage, canonical, cur, decryptIncoming, handleDrInit, handleRemoteDeleted, maybeNotifyMessage, maybeStartDr, note, noteRoomDevice, ownDev, previewOf, renderMembersList, renderMessages, renderPresence, renderRoomList, roomMessages, roomQueue, saveRoom, storeMessage, storeRatchetMiss, suspendDr } from './chat.js?v=47';
 
 // ---------- Доставка / прочтение (v25) ----------
 export const chatVisible = () =>

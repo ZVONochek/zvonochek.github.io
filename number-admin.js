@@ -1,15 +1,15 @@
 // number-admin.js — «Сменить номер» и «Стереть всё»
 // v44: вынесено из app.js без изменения логики (строки 4768–5349 v43).
-import { InboxListener, inboxAck, inboxAnswer, inboxRegister, inboxRetire } from './inbox.js?v=46';
-import { adminSigner, ensurePersonal, getChatDeviceEcdh, getPersonal, hasPersonal, personalLinkOf, resetIdentityCache, rotatePersonal, signWithDevice } from './identity.js?v=46';
-import { anonName } from './anon-names.js?v=46';
-import { b64u, deriveRoom, open as openSealed } from './crypto.js?v=46';
-import { ensurePushSub, loadMissed, updatePushUI } from './push-ui.js?v=46';
-import { getWorkerBase } from './config.js?v=46';
-import { hasOtherDevices, isLinkedDevice, rotateWithDevices, rotationCandidates, startDevices, unlinkSelf } from './devices.js?v=46';
-import { wipeDatabase } from './store.js?v=46';
-import { $, S, chatDialKey, chatDialTopic, copy, hangup, journalAdd, preJoin, renderCalls, renderQr, show, startRingtone, stopRingtone, toast } from './app.js?v=46';
-import { backOf, rememberPeer, shareBackOn, syncLocal } from './contacts.js?v=46';
+import { InboxListener, inboxAck, inboxAnswer, inboxRegister, inboxRetire } from './inbox.js?v=47';
+import { adminSigner, ensurePersonal, getChatDeviceEcdh, getPersonal, hasPersonal, personalLinkOf, resetIdentityCache, rotatePersonal, signWithDevice } from './identity.js?v=47';
+import { anonName } from './anon-names.js?v=47';
+import { b64u, deriveRoom, open as openSealed } from './crypto.js?v=47';
+import { ensurePushSub, loadMissed, updatePushUI } from './push-ui.js?v=47';
+import { getWorkerBase } from './config.js?v=47';
+import { hasOtherDevices, isLinkedDevice, rotateWithDevices, rotationCandidates, startDevices, unlinkSelf } from './devices.js?v=47';
+import { wipeDatabase } from './store.js?v=47';
+import { $, S, chatDialKey, chatDialTopic, copy, hangup, journalAdd, preJoin, renderCalls, renderQr, show, startRingtone, stopRingtone, toast } from './app.js?v=47';
+import { backOf, rememberPeer, shareBackOn, syncLocal } from './contacts.js?v=47';
 
 // ---------- v38: «Сменить номер» и «Стереть всё» ----------
 // Отзыв Inbox, который не удалось выполнить сразу (нет сети), повторяется

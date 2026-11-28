@@ -1,7 +1,7 @@
 // chat-files.js — Файлы и голосовые сообщения
 // v44: вынесено из chat.js без изменения логики (строки 3395–3675 v43).
-import { FILE_CHUNK_PT, FILE_MAX_BYTES, b64u, decryptFileChunk, encryptFileChunk, importFileKey } from './crypto.js?v=46';
-import { $, api, cur, fileState, fmtSize, note, sendMsg, voiceAudio } from './chat.js?v=46';
+import { FILE_CHUNK_PT, FILE_MAX_BYTES, b64u, decryptFileChunk, encryptFileChunk, importFileKey } from './crypto.js?v=47';
+import { $, api, cur, fileState, fmtSize, note, sendMsg, voiceAudio } from './chat.js?v=47';
 
 // ---------- Файлы (v25) ----------
 export function setFileProgress(pct, label) {

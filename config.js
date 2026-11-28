@@ -67,20 +67,20 @@ export const CONFIG = {
   // Замена — Cloudflare TURN ниже: креды эфемерные, секретов в клиенте нет.
   EXTRA_ICE_SERVERS: [],
 
-  // v45: Cloudflare TURN — отдельный Worker zvonochek-turn в отдельном
-  // аккаунте Cloudflare. Отдаёт временные (TTL 1 час) TURN-креды
-  // turn.cloudflare.com; секрет TURN-ключа лежит только в секретах
-  // этого Worker, доступ к эндпоинту — только с origin сайта.
+  // v47: внешних TURN-эндпоинтов БОЛЬШЕ НЕТ. Воркеры monbim322
+  // (zvonochek-turn и zvonochek-turn-reserve из v45/v46) мертвы —
+  // исполнение на том аккаунте отключено (ошибка 1101), из лестницы
+  // они убраны, чтобы не тратить время на тайм-ауты. Весь TURN теперь
+  // раздаёт сам сигнальный Worker (см. WORKER_URL, эндпоинт /turn):
+  // 28.11.2026 в его секреты внесены Cloudflare TURN (эфемерные
+  // креды, TTL 1 час) и статические Metered + ExpressTURN — все три
+  // провайдера одним запросом, секретов в клиенте по-прежнему нет.
   // TURN по-прежнему КРАЙНЕЕ средство (v38): старт звонка — напрямую
   // (STUN), эндпоинт дёргается только лестницей ensureTurnLoaded.
-  TURN_CF_URL: 'https://zvonochek-turn.monbim322.workers.dev/turn',
-
-  // v46: резерв владельца (Metered + ExpressTURN) — те же логины, что
-  // до v44 лежали статикой в этом файле, но теперь они спрятаны в
-  // секретах отдельного Worker zvonochek-turn-reserve и отдаются
-  // только с origin сайта. В публичном коде их больше нет; в лестнице
-  // резерв идёт после Cloudflare TURN и сигнального Worker.
-  TURN_RESERVE_URL: 'https://zvonochek-turn-reserve.monbim322.workers.dev/turn',
+  // Поля оставлены пустыми: сюда можно вернуть отдельный внешний
+  // TURN-эндпоинт одной строкой, если он когда-нибудь появится.
+  TURN_CF_URL: '',
+  TURN_RESERVE_URL: '',
 };
 
 // ---------- v28: «Свой сервер» — единый резолвер адреса Worker ----------
